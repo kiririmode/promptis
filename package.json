@@ -115,7 +115,7 @@
     "test:linux": "xvfb-run -a vscode-test --coverage --coverage-output --coverage-reporter html json-summary",
     "test:win32:darwin": "vscode-test --coverage --coverage-output --coverage-reporter html json-summary",
     "test-versions": ".github/scripts/test_vscode_versions.sh",
-    "build:license": "license-checker-rseidelsohn --excludePackages promptis --unknown --csv --csvComponentPrefix --production --onlyAllow 'ISC;MIT;Apache-2.0' --files licenses/",
+    "build:license": "license-checker-rseidelsohn --excludePackages promptis --unknown --csv --csvComponentPrefix --production --onlyAllow 'ISC;MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;0BSD' --files licenses/",
     "build:vsix": "vsce package",
     "build": "npm-run-all -s build:license build:vsix"
   },
@@ -141,7 +141,8 @@
   },
   "dependencies": {
     "minimatch": "^10.0.1",
-    "moment": "^2.30.1"
+    "moment": "^2.30.1",
+    "proxy-agent": "^6.4.0"
   },
   "mocha": {
     "timeout": 5000

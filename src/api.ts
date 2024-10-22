@@ -1,5 +1,6 @@
 import axios from "axios";
 import { env } from "process";
+import { ProxyAgent, ProxyAgentOptions } from "proxy-agent";
 import * as vscode from "vscode";
 import { Config } from "./config";
 import { Configuration, PostUsageRequest, UsageApi } from "./openapi";
@@ -27,14 +28,18 @@ function getAxiosConfig(basePath: string): axios.AxiosRequestConfig {
   }
 
   const url = new URL(proxy);
-  console.log("Proxy detected: ", url);
+  const proxyOptions: ProxyAgentOptions = {
+    host: url.hostname,
+    port: parseInt(url.port, 10),
+    protocol: url.protocol.replace(":", ""),
+  };
+  const agent = new ProxyAgent(proxyOptions);
+
   return {
     baseURL: basePath,
-    proxy: {
-      host: url.hostname,
-      port: parseInt(url.port, 10),
-      protocol: url.protocol.replace(":", ""),
-    },
+    httpAgent: agent,
+    httpsAgent: agent,
+    proxy: false, // http_proxy等環境変数をaxios内部で読まないようにする
   };
 }
 
