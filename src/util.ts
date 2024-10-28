@@ -63,8 +63,6 @@ export function extractTargetFiles(req: vscode.ChatRequest): string[] {
   for (let i = req.references.length - 1; i >= 0; i--) {
     const ref = req.references[i];
 
-    // vscode.window.showInformationMessage(`ref: ${JSON.stringify(ref)}`);
-
     // チャットの中で #file: として指定された時の request.references の例
     //   Linuxの場合:   {"id":"vscode.file","name":"file:.bashrc","range":[12,25],"value":{"$mid":1,"path":"/home/node/.bashrc","scheme":"file"}}]
     //   Windowsの場合: {"id":"vscode.file","name":"file:util.ts","range":[0,13], "value":{"$mid":1,"fsPath":"c:\\path\\to\\util.ts","_sep":1,"external":"file:///path/to/util.ts","path":"/c:/path/to/util.ts","scheme":"file"}}
