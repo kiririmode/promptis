@@ -19,7 +19,7 @@ export class Config {
    * @param key 設定キー
    * @returns 設定パス、または未定義
    */
-  static getPath(key: string): string | undefined {
+  private static getPath(key: string): string | undefined {
     console.debug(`Getting path for ${key}: ` + Config.isWorkspaceAvailabile());
     if (!Config.isWorkspaceAvailabile()) {
       return undefined;

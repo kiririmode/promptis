@@ -133,7 +133,7 @@ export async function processSourceFiles(
   model: vscode.LanguageModelChat,
   token: vscode.CancellationToken,
   stream: vscode.ChatResponseStream,
-) {
+): Promise<void> {
   // ソースファイルを軸にして、プロンプトを適用していく
   for (const sourcePath of sourcePaths) {
     stream.progress(`Processing ${sourcePath} ...\n`);
@@ -151,14 +151,14 @@ export async function processSourceFiles(
  * @param {vscode.LanguageModelChat} model - 使用するChat Model
  * @param {vscode.CancellationToken} token - キャンセルトークン。
  * @param {vscode.ChatResponseStream} stream - チャット用の Response Stream
- * @returns {Promise<void>} 処理が完了したことを示すPromise
+ * @returns {Promise<void | vscode.ChatResult>} 処理が完了したことを示すPromise、またはエラーが発生した場合はエラー情報を含む ChatResult
  */
 export async function processSelectedContent(
   promptFiles: string[],
   model: vscode.LanguageModelChat,
   token: vscode.CancellationToken,
   stream: vscode.ChatResponseStream,
-) {
+): Promise<void | vscode.ChatResult> {
   const editor = vscode.window.activeTextEditor;
   if (!editor) {
     return createErrorResponse("No active editor", stream);
@@ -198,7 +198,7 @@ export async function processContent(
   model: vscode.LanguageModelChat,
   token: vscode.CancellationToken,
   stream: vscode.ChatResponseStream,
-) {
+): Promise<void> {
   for (const promptFile of promptFiles) {
     const promptContent = fs.readFileSync(promptFile, "utf8");
     const messages = [
