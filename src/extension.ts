@@ -48,7 +48,7 @@ export const commandMap: { [key: string]: Command } = {};
  * @param {vscode.ExtensionContext} context - 拡張機能のライフサイクルを管理するためのコンテキストオブジェクト
  */
 export function registerCommands(context: vscode.ExtensionContext, commandMap: { [key: string]: Command }) {
-  for (const [key, value] of Object.entries(commandMap)) {
+  for (const [_, value] of Object.entries(commandMap)) {
     context.subscriptions.push(vscode.commands.registerCommand(value.id, (...args) => value.execute(context, ...args)));
   }
 }
