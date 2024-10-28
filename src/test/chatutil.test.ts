@@ -2,7 +2,7 @@ import * as assert from "assert";
 import * as path from "path";
 import * as sinon from "sinon";
 import * as vscode from "vscode"; // Add this line to import the vscode namespace
-import { FileChatResponseStream } from "../chatutil";
+import { FileChatResponseStreamWrapper } from "../chatutil";
 
 suite("FileChatResponseStream Test Suite", function () {
   let mockOriginalStream: vscode.ChatResponseStream;
@@ -23,7 +23,7 @@ suite("FileChatResponseStream Test Suite", function () {
 
   test("FileChatResponseStream constructor should initialize properties", function () {
     const filePath = "test/path";
-    const stream = new FileChatResponseStream(mockOriginalStream, filePath);
+    const stream = new FileChatResponseStreamWrapper(mockOriginalStream, filePath);
 
     assert.strictEqual(stream["originalStream"], mockOriginalStream);
     assert.strictEqual(stream["filePath"], filePath);
@@ -32,7 +32,7 @@ suite("FileChatResponseStream Test Suite", function () {
 
   test("FileChatResponseStream markdown method should add content and call original stream", function () {
     const filePath = path.normalize(`${__dirname}/../../out/test1`);
-    const stream = new FileChatResponseStream(mockOriginalStream, filePath);
+    const stream = new FileChatResponseStreamWrapper(mockOriginalStream, filePath);
     const markdownContent = "test markdown";
 
     stream.markdown(markdownContent);
@@ -44,7 +44,7 @@ suite("FileChatResponseStream Test Suite", function () {
 
   test("FileChatResponseStream writeToFile method should write content to file", function () {
     const filePath = path.normalize(`${__dirname}/../../out/test2`);
-    const stream = new FileChatResponseStream(mockOriginalStream, filePath);
+    const stream = new FileChatResponseStreamWrapper(mockOriginalStream, filePath);
     stream["content"] = ["line1", "line2"];
 
     stream.writeToFile();
@@ -52,7 +52,7 @@ suite("FileChatResponseStream Test Suite", function () {
 
   test("writeToFile should handle errors gracefully", function () {
     const filePath = path.normalize(`${__dirname}/../../out`);
-    const stream = new FileChatResponseStream(mockOriginalStream, filePath);
+    const stream = new FileChatResponseStreamWrapper(mockOriginalStream, filePath);
     stream["content"] = ["line1", "line2"];
     const error = new Error("Test error");
 
@@ -66,7 +66,7 @@ suite("FileChatResponseStream Test Suite", function () {
 
   test("FileChatResponseStream anchor method should call original stream's anchor", function () {
     const filePath = "test/path";
-    const stream = new FileChatResponseStream(mockOriginalStream, filePath);
+    const stream = new FileChatResponseStreamWrapper(mockOriginalStream, filePath);
     const value = vscode.Uri.parse("testValue");
     const title = "testTitle";
 
@@ -78,7 +78,7 @@ suite("FileChatResponseStream Test Suite", function () {
 
   test("FileChatResponseStream button method should call original stream's button", function () {
     const filePath = "test/path";
-    const stream = new FileChatResponseStream(mockOriginalStream, filePath);
+    const stream = new FileChatResponseStreamWrapper(mockOriginalStream, filePath);
     const command = { command: "testCommand" } as vscode.Command;
 
     stream.button(command);
@@ -89,7 +89,7 @@ suite("FileChatResponseStream Test Suite", function () {
 
   test("FileChatResponseStream filetree method should call original stream's filetree", function () {
     const filePath = "test/path";
-    const stream = new FileChatResponseStream(mockOriginalStream, filePath);
+    const stream = new FileChatResponseStreamWrapper(mockOriginalStream, filePath);
     const value = [{ name: "testName", children: [] }] as vscode.ChatResponseFileTree[];
     const baseUri = vscode.Uri.file("test/baseUri");
 
@@ -101,7 +101,7 @@ suite("FileChatResponseStream Test Suite", function () {
 
   test("FileChatResponseStream progress method should call original stream's progress", function () {
     const filePath = "test/path";
-    const stream = new FileChatResponseStream(mockOriginalStream, filePath);
+    const stream = new FileChatResponseStreamWrapper(mockOriginalStream, filePath);
     const value = "testProgress";
 
     stream.progress(value);
@@ -112,7 +112,7 @@ suite("FileChatResponseStream Test Suite", function () {
 
   test("FileChatResponseStream reference method should call original stream's reference", function () {
     const filePath = "test/path";
-    const stream = new FileChatResponseStream(mockOriginalStream, filePath);
+    const stream = new FileChatResponseStreamWrapper(mockOriginalStream, filePath);
     const value = vscode.Uri.file("test/reference");
     const iconPath = vscode.Uri.file("test/iconPath");
 
@@ -124,7 +124,7 @@ suite("FileChatResponseStream Test Suite", function () {
 
   test("FileChatResponseStream push method should call original stream's push", function () {
     const filePath = "test/path";
-    const stream = new FileChatResponseStream(mockOriginalStream, filePath);
+    const stream = new FileChatResponseStreamWrapper(mockOriginalStream, filePath);
     const part = { type: "testPart" } as unknown as vscode.ChatResponsePart;
 
     stream.push(part);

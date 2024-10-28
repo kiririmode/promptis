@@ -6,7 +6,7 @@ import * as vscode from "vscode";
  * @interface
  * 拡張されたチャットレスポンスストリーム。ファイルに書き込む機能を追加している
  */
-interface IFileChatResponseStream extends vscode.ChatResponseStream {
+interface FileChatResponseStream extends vscode.ChatResponseStream {
   writeToFile(filePath: string): void;
 }
 
@@ -15,7 +15,7 @@ interface IFileChatResponseStream extends vscode.ChatResponseStream {
  * コンストラクタで指定されたファイルに対し、ChatResponseStream に書き込まれた内容を書き込む
  *
  */
-export class FileChatResponseStream implements IFileChatResponseStream {
+export class FileChatResponseStreamWrapper implements FileChatResponseStream {
   private originalStream: vscode.ChatResponseStream;
   private content: string[] = [];
   private filePath: string;

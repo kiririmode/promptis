@@ -3,7 +3,7 @@ import moment from "moment";
 import path from "path";
 import * as vscode from "vscode";
 import { postUsage } from "./api";
-import { FileChatResponseStream } from "./chatutil";
+import { FileChatResponseStreamWrapper } from "./chatutil";
 import { Config } from "./config";
 import { extractTargetFiles, findPromptFiles } from "./util";
 
@@ -211,7 +211,7 @@ export async function processContent(
       const outputDirPath = Config.getChatOutputDirPath();
       if (outputDirPath && outputDirPath.length > 0) {
         // ResponseStream をラップして、ファイルに保存するようにする
-        stream = new FileChatResponseStream(stream, makeChatFilePath(outputDirPath, promptFile, contentFilePath));
+        stream = new FileChatResponseStreamWrapper(stream, makeChatFilePath(outputDirPath, promptFile, contentFilePath));
       }
       stream.markdown(`## Prompt file: ${path.basename(promptFile)}\n\n`);
 
@@ -247,7 +247,7 @@ export async function processContent(
       stream.markdown(`Error processing content: ${error}`);
     } finally {
       stream.markdown("\n\n");
-      if (stream instanceof FileChatResponseStream) {
+      if (stream instanceof FileChatResponseStreamWrapper) {
         stream.writeToFile();
       }
     }
