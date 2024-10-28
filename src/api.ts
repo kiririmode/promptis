@@ -31,7 +31,7 @@ function getAxiosConfig(basePath: string): axios.AxiosRequestConfig {
   const proxyOptions: ProxyAgentOptions = {
     host: url.hostname,
     port: parseInt(url.port, 10),
-    protocol: url.protocol.replace(":", ""),
+    protocol: url.protocol.slice(0, -1),
   };
   const agent = new ProxyAgent(proxyOptions);
 
