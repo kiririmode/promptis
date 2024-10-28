@@ -35,11 +35,11 @@ const commandPromptDirectoryMap: CommandPromptPathMap = new Map([
  * 7. デバッグ用にリクエストの詳細をコンソールに出力する。
  */
 export const chatHandler: vscode.ChatRequestHandler = async (
-  request: vscode.ChatRequest,
-  context: vscode.ChatContext,
-  stream: vscode.ChatResponseStream,
-  token: vscode.CancellationToken,
-): Promise<vscode.ChatResult> => {
+  request,
+  context,
+  stream,
+  token,
+) => {
   // chatに使用するAIモデルを選択する
   const chatModel = await selectChatModel();
   if (!chatModel) {
