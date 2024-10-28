@@ -77,8 +77,6 @@ export const chatHandler: vscode.ChatRequestHandler = async (
     // ファイル指定がなければ、エディタで選択されている内容をレビューする
     await processSelectedContent(promptFiles, chatModel, token, stream);
   }
-
-  return {};
 };
 
 export function getPromptDirectory(command: string): string | undefined {
