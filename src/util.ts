@@ -72,7 +72,7 @@ export function extractTargetFiles(req: vscode.ChatRequest): string[] {
     if (ref.id === "vscode.file") {
       const uri = ref.value as vscode.Uri;
       // 基本的にはfsPathを使うべき。ただし、Linuxの場合はfsPathが渡されないため、pathを使う
-      ret.push(uri.fsPath || uri.path);
+      ret.push(uri.fsPath ?? uri.path);
     }
   }
   return ret;

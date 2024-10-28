@@ -77,7 +77,7 @@ export class Config {
    * @returns 除外ファイルパターンの配列
    */
   static getPromptExcludeFilePatterns(): string[] {
-    return vscode.workspace.getConfiguration().get<string[]>("prompt.excludeFilePatterns") || [];
+    return vscode.workspace.getConfiguration().get<string[]>("prompt.excludeFilePatterns") ?? [];
   }
 
   /**

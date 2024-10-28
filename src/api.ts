@@ -14,11 +14,11 @@ const api = new UsageApi(config, "", axiosInstance);
 function getAxiosConfig(basePath: string): axios.AxiosRequestConfig {
   // APIサーバはHTTPSで提供されるため、HTTPSプロキシを優先する
   const proxy =
-    vscode.workspace.getConfiguration("https").get<string>("proxy") ||
-    env.https_proxy ||
-    env.HTTPS_PROXY ||
-    vscode.workspace.getConfiguration("http").get<string>("proxy") ||
-    env.http_proxy ||
+    vscode.workspace.getConfiguration("https").get<string>("proxy") ??
+    env.https_proxy ??
+    env.HTTPS_PROXY ??
+    vscode.workspace.getConfiguration("http").get<string>("proxy") ??
+    env.http_proxy ??
     env.HTTP_PROXY;
 
   if (!proxy) {
@@ -83,8 +83,8 @@ export async function postUsage(command: string) {
     language: vscode.env.language,
     vscodeVersion: vscode.version,
     os: process.platform,
-    extensionId: vscode.extensions.getExtension("tis.promptis")?.id || "",
-    extensionVersion: vscode.extensions.getExtension("tis.promptis")?.packageJSON.version || "",
+    extensionId: vscode.extensions.getExtension("tis.promptis")?.id ?? "",
+    extensionVersion: vscode.extensions.getExtension("tis.promptis")?.packageJSON.version ?? "",
     // MachineIdの生成: https://github.com/microsoft/vscode/blob/a016ec9b66ffdd3ff0f831768b8e75be008a54e4/src/vs/base/node/id.ts#L81
     machineId: vscode.env.machineId,
   };
