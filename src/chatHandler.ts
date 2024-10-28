@@ -7,8 +7,6 @@ import { FileChatResponseStream } from "./chatutil";
 import { Config } from "./config";
 import { extractTargetFiles, findPromptFiles } from "./util";
 
-export interface IPromptisChatResult extends vscode.ChatResult {}
-
 type CommandPromptPathMap = Map<string, () => string | undefined>;
 const commandPromptDirectoryMap: CommandPromptPathMap = new Map([
   ["codereviewCodeStandards", Config.getCodeReviewStandardPath],
@@ -41,7 +39,7 @@ export const chatHandler: vscode.ChatRequestHandler = async (
   context: vscode.ChatContext,
   stream: vscode.ChatResponseStream,
   token: vscode.CancellationToken,
-): Promise<IPromptisChatResult> => {
+): Promise<vscode.ChatResult> => {
   // chatに使用するAIモデルを選択する
   const chatModel = await selectChatModel();
   if (!chatModel) {
@@ -274,7 +272,7 @@ export function makeChatFilePath(dirPath: string, promptPath: string, sourceFile
   return path.join(dirPath, `${srcBasename}_${promptBasename}_${timestamp}.md`);
 }
 
-export function createErrorResponse(message: string, stream: vscode.ChatResponseStream): IPromptisChatResult {
+export function createErrorResponse(message: string, stream: vscode.ChatResponseStream): vscode.ChatResult {
   console.debug(message);
   stream.markdown(message);
   return { errorDetails: { message } };
