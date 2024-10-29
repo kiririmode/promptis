@@ -141,7 +141,6 @@
   },
   "dependencies": {
     "minimatch": "^10.0.1",
-    "moment": "^2.30.1",
     "proxy-agent": "^6.4.0"
   },
   "mocha": {

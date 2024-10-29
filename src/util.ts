@@ -77,3 +77,19 @@ export function extractTargetFiles(req: vscode.ChatRequest): string[] {
   }
   return ret;
 }
+
+/**
+ * タイムスタンプをYYYYMMDD-HHmmss形式の文字列で返す関数。
+ * 
+ * @param {Date} date - タイムスタンプを取得する日時。省略した場合は現在時刻を使用する。
+ * @returns {string} - YYYYMMDD-HHmmss形式の文字列
+ */
+export function timestampAsString(date: Date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hour = String(date.getHours()).padStart(2, "0");
+  const minute = String(date.getMinutes()).padStart(2, "0");
+  const second = String(date.getSeconds()).padStart(2, "0");
+  return `${year}${month}${day}-${hour}${minute}${second}`;
+}

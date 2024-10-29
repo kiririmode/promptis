@@ -2,7 +2,7 @@ import * as assert from "assert";
 import * as path from "path";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
-import { extractTargetFiles, findPromptFiles } from "../util";
+import { extractTargetFiles, findPromptFiles, timestampAsString } from "../util";
 
 suite("Util Test Suite", function () {
   let mockShowErrorMessage: sinon.SinonStub;
@@ -80,6 +80,20 @@ suite("Util Test Suite", function () {
 
       const result = extractTargetFiles(req);
       assert.deepStrictEqual(result, ["/path/to/file1"]);
+    });
+  });
+
+  suite("timestampAsString Test Suite", function () {
+    const tests = [
+      { date: new Date("2024-01-02T03:04:05"), expected: "20240102-030405" },
+      { date: new Date("2024-01-02T23:04:05"), expected: "20240102-230405" }, // 24時間表記になることを確認
+    ];
+
+    tests.forEach(({ date, expected }) => {
+      test(`timestampAsString should return ${expected} from ${date}`, function () {
+        const result = timestampAsString(date);
+        assert.strictEqual(result, expected);
+      });  
     });
   });
 });

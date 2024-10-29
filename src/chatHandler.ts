@@ -1,11 +1,10 @@
 import fs from "fs";
-import moment from "moment";
 import path from "path";
 import * as vscode from "vscode";
 import { postUsage } from "./api";
 import { FileChatResponseStreamWrapper } from "./chatutil";
 import { Config } from "./config";
-import { extractTargetFiles, findPromptFiles } from "./util";
+import { extractTargetFiles, findPromptFiles, timestampAsString } from "./util";
 
 type CommandPromptPathMap = Map<string, () => string | undefined>;
 const commandPromptDirectoryMap: CommandPromptPathMap = new Map([
@@ -265,7 +264,7 @@ export async function processContent(
 export function makeChatFilePath(dirPath: string, promptPath: string, sourceFilePath: string): string {
   const srcBasename = path.basename(sourceFilePath, path.extname(sourceFilePath));
   const promptBasename = path.basename(promptPath, path.extname(promptPath));
-  const timestamp = moment().format("YYYYMMDD-HHmmss");
+  const timestamp = timestampAsString();
 
   return path.join(dirPath, `${srcBasename}_${promptBasename}_${timestamp}.md`);
 }
