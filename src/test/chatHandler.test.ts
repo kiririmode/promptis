@@ -89,7 +89,7 @@ suite("chatHandler Test Suite", function () {
       const { context, stream, token } = createPartOfChatRequest();
 
       const result = await chatHandlerModule.chatHandler(request, context, stream, token);
-      assert.deepStrictEqual(result, {});
+      assert.strictEqual(result, undefined);
     });
 
     test("chatHandler should return error if no chat model is found", async function () {
@@ -163,7 +163,7 @@ suite("chatHandler Test Suite", function () {
       const { context, stream, token } = createPartOfChatRequest();
 
       const result = await chatHandlerModule.chatHandler(request, context, stream, token);
-      assert.deepStrictEqual(result, {});
+      assert.strictEqual(result, undefined);
     });
   });
 });
