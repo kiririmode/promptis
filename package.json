@@ -16,6 +16,11 @@
     "AI",
     "Chat"
   ],
+  "keywords": [
+    "ai",
+    "chat-participant",
+    "copilot"
+  ],
   "activationEvents": [],
   "main": "./dist/extension.js",
   "contributes": {
