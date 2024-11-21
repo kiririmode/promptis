@@ -113,4 +113,7 @@ Chatウィンドウから @promptis に対して指示（コマンド）を出�
 
 [Apache-2.0 License](./LICENSE)
 
-## Release Notes
+## Acknowledgements
+
+TIS株式会社 産業ビジネス第３事業部 産業モダナイゼーションビジネス部の津田 浩一氏、中泉 卓馬氏に心より感謝申し上げます。  
+お二人は本Extensionのオリジナル実装を行い、その成果創出とOSS公開に大きく貢献してくださいました。
