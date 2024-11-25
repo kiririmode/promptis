@@ -109,4 +109,8 @@ Telemetry transmission can be disabled in user settings.
 
 [Apache-2.0 License](./LICENSE)
 
-## Release Notes
+## Acknowledgements
+
+We would like to express our sincere gratitude to Mr. Koichi Tsuda and Mr. Takuma Nakaizumi from the Industrial Modernization Business Dept., Industry Business Div. 3, TIS Inc.
+
+Both of them made significant contributions by implementing the original version of this Extension and helping to make it available as open-source software.
