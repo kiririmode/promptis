@@ -60,6 +60,8 @@ The commands you can instruct are as follows:
 |`reverseEngineeringPromptPath` | Conduct reverse engineering on the source code |
 | `drawDiagrams` | Create diagrams from the source code |
 
+For prompt examples, please refer to our [Generative AI Engineering Utilization Guide](https://fintan-contents.github.io/gai-dev-guide/prompts). The compressed files can be downloaded from [here](https://github.com/Fintan-contents/gai-dev-guide/releases).
+
 ## Requirements
 
 - [VS Code](https://code.visualstudio.com/) [version.1.91.0](https://code.visualstudio.com/updates/v1_91) or later

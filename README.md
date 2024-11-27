@@ -64,6 +64,8 @@ Chatウィンドウから @promptis に対して指示（コマンド）を出�
 | `reverseEngineeringPromptPath`  | ソースコードに対するリバースエンジニアリングを行う |
 | `drawDiagrams`                  | ソースコードから図式を作成する |
 
+プロンプト例については、[生成AI エンジニアリング活用ガイド](https://fintan-contents.github.io/gai-dev-guide/prompts)にも公開しており、圧縮ファイルは[こちら](https://github.com/Fintan-contents/gai-dev-guide/releases)からダウンロードいただけます。
+
 ## Requirements
 
 - [VS Code](https://code.visualstudio.com/) が[version.1.91.0](https://code.visualstudio.com/updates/v1_91)以降
