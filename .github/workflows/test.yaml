@@ -29,22 +29,3 @@ jobs:
     - name: Run Tests
       run: npm run test
       if: runner.os == 'Linux'
-
-    - name: Generate coverage badge
-      uses: jaywcjlove/coverage-badges-cli@main
-      with:
-        source: coverage/coverage-summary.json
-        output: coverage/badge.svg
-
-    - name: Convert SVG to PNG
-      uses: joergnapp/convert-svg-to-png@v1.0
-      with:
-        svgpath: 'coverage/'
-        pngpath: 'coverage/'
-
-    - name: Push coverage badge
-      uses: peaceiris/actions-gh-pages@v4
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./coverage
-        destination_dir: coverage
