@@ -82,25 +82,30 @@ function uriToPath(uri: vscode.Uri): string {
  * console.log(files);
  */
 export async function extractFilesInDirectory(
+  req: vscode.ChatRequest,
   filterPattern: string,
   stream: vscode.ChatResponseStream,
 ): Promise<string[]> {
   // 処理対象ソースファイルのパスを格納する配列
   const srcPaths: string[] = [];
 
-  const dirUris = await vscode.window.showOpenDialog({
-    canSelectFiles: false,
-    canSelectFolders: true,
-    canSelectMany: false,
-    openLabel: "Select Directory",
-  });
-  if (!dirUris || dirUris.length === 0) {
-    return [];
+  // ディレクトリが明示的に指定されている場合は非 undefined となる
+  let dirUri = getUserSpecifiedDirectory(req);
+  if (!dirUri) {
+    const dirUris = await vscode.window.showOpenDialog({
+      canSelectFiles: false,
+      canSelectFolders: true,
+      canSelectMany: false,
+      openLabel: "Select Directory",
+    });
+    if (!dirUris || dirUris.length === 0) {
+      return [];
+    }
+
+    dirUri = dirUris[0];
   }
 
-  const dirUri = dirUris[0];
   const dirPath = uriToPath(dirUri);
-
   stream.markdown(
     `You specified \`#dir\`, so the following files under the specified directory \`${dirPath}\` will be added as targets for prompt application.\n\n`,
   );
@@ -143,7 +148,7 @@ export async function extractTargetFiles(
   // チャットの中で #dir を指定された時に、ディレクトリを選択させる
   // 選択されたディレクトリ配下のファイルをプロンプト処理対象とする
   if (req.prompt.includes("#dir")) {
-    const paths = await extractFilesInDirectory(filterPattern, stream);
+    const paths = await extractFilesInDirectory(req, filterPattern, stream);
     srcPaths.push(...paths);
   }
 
@@ -166,6 +171,56 @@ export async function extractTargetFiles(
   // 処理対象ファイルを出力し終えたことを示すために、区切り線を表示する
   stream.markdown(`----\n\n`);
   return srcPaths;
+}
+
+/**
+ * プロンプト内で #dir: を用いる形でユーザーが指定したディレクトリを取得する
+ *
+ * @param req - ユーザーからのプロンプトを含む `vscode.ChatRequest` オブジェクト。
+ * @returns ユーザーが指定したディレクトリの `vscode.Uri` オブジェクト、またはディレクトリが見つからない場合は `undefined` を返す。
+ *
+ * ユーザーが指定するディレクトリは、`#dir:` プレフィックスに続くダブルクォートで囲まれた文字列、または非空白文字列として認識される
+ * 指定されたディレクトリが絶対パスの場合、そのパスが存在するかどうかを確認する
+ * 指定されたディレクトリが相対パスの場合、ワークスペースルートからの相対パスとして存在確認を行う
+ *
+ * ワークスペースが開かれていない場合、エラーメッセージを表示し、`undefined` を返す
+ * ディレクトリが見つからない場合もエラーメッセージを表示し、`undefined` を返します。
+ */
+export function getUserSpecifiedDirectory(req: vscode.ChatRequest): vscode.Uri | undefined {
+  // ダブルクォートで囲まれた1つ以上の任意の文字列にマッチ、
+  // あるいは、1つ以上の非空白文字列にマッチ
+  const dirMatch = req.prompt.match(/#dir:(?:"([^"]+)"|(\S+))?/);
+  console.info(`dirMatch: ${dirMatch}`);
+
+  if (!dirMatch) {
+    return undefined;
+  }
+
+  const dirPath = dirMatch[1] || dirMatch[2];
+  console.info(`User specified directory: ${dirPath}`);
+
+  let absDirPath: string;
+
+  if (path.isAbsolute(dirPath)) {
+    absDirPath = dirPath;
+  } else {
+    // 相対パスの場合は、ワークスペースルートからの相対パスとして存在確認を実施
+    // ワークスペースは複数開いている可能性があるが、Clineでも最初の1つを取得していたため、まずはそれに合わせる
+    const workspaceRoot = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
+    if (!workspaceRoot) {
+      vscode.window.showErrorMessage("No workspace is opened.");
+      return undefined;
+    }
+    absDirPath = path.join(workspaceRoot, dirPath);
+  }
+
+  // ディレクトリ存在チェック
+  if (!fs.existsSync(absDirPath)) {
+    // ディレクトリが存在しない場合はエラーとする
+    vscode.window.showErrorMessage(`Directory not found: ${absDirPath}`);
+    return undefined;
+  }
+  return vscode.Uri.file(absDirPath);
 }
 
 /**
