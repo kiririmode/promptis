@@ -1,8 +1,20 @@
 import * as assert from "assert";
 import * as path from "path";
+import proxyquire from "proxyquire";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 import { extractFilesInDirectory, extractTargetFiles, findPromptFiles, timestampAsString } from "../util";
+
+/*
+ * fs.existsSync のスタブ
+ *
+ * fs.existsSync は非書き換え可能であり、直接スタブを作成することができないため、
+ * proxyquire を利用して fs.existsSync のスタブを作成する。
+ */
+const fsStub = {
+  existsSync: sinon.stub(),
+};
+const { getUserSpecifiedDirectory } = proxyquire("../util", { fs: fsStub });
 
 suite("Util Test Suite", function () {
   let mockShowErrorMessage: sinon.SinonStub;
@@ -119,11 +131,15 @@ suite("Util Test Suite", function () {
       mockFindFiles.restore();
     });
 
+    const req = {
+      prompt: "hoge",
+    } as unknown as vscode.ChatRequest;
+
     test("ディレクトリ選択がキャンセルされた場合、空の配列を返すべき", async function () {
       mockShowOpenDialog.resolves(undefined);
       const stream = { markdown: mockMarkdown } as unknown as vscode.ChatResponseStream;
 
-      const result = await extractFilesInDirectory("**/*.md", stream);
+      const result = await extractFilesInDirectory(req, "**/*.md", stream);
       assert.deepStrictEqual(result, []);
       sinon.assert.notCalled(mockMarkdown);
     });
@@ -133,7 +149,7 @@ suite("Util Test Suite", function () {
       mockFindFiles.resolves([]);
       const stream = { markdown: mockMarkdown } as unknown as vscode.ChatResponseStream;
 
-      const result = await extractFilesInDirectory("**/*.md", stream);
+      const result = await extractFilesInDirectory(req, "**/*.md", stream);
       assert.deepStrictEqual(result, []);
       sinon.assert.calledOnce(mockMarkdown);
       sinon.assert.calledWith(mockMarkdown, sinon.match.string);
@@ -147,10 +163,80 @@ suite("Util Test Suite", function () {
       ]);
       const stream = { markdown: mockMarkdown } as unknown as vscode.ChatResponseStream;
 
-      const result = await extractFilesInDirectory("**/*.md", stream);
+      const result = await extractFilesInDirectory(req, "**/*.md", stream);
       assert.deepStrictEqual(result, ["/path/to/directory/file1.md", "/path/to/directory/file2.md"]);
       sinon.assert.calledThrice(mockMarkdown);
       sinon.assert.calledWith(mockMarkdown, sinon.match.string);
+    });
+  });
+
+  suite("getUserSpecifiedDirectory テスト", () => {
+    let mockWorkspaceFolders: sinon.SinonStub;
+    setup(() => {
+      fsStub.existsSync.reset();
+      mockWorkspaceFolders = sinon.stub(vscode.workspace, "workspaceFolders");
+    });
+
+    teardown(() => {
+      mockWorkspaceFolders.restore();
+    });
+
+    test("指定された絶対パスが存在する場合、ディレクトリパスを返すこと", () => {
+      const req = { prompt: "#dir:/absolute/path/to/dir" } as vscode.ChatRequest;
+      const dirPath = "/absolute/path/to/dir";
+      fsStub.existsSync.withArgs(dirPath).returns(true);
+
+      const result = getUserSpecifiedDirectory(req) as vscode.Uri;
+      assert.strictEqual(result.path, dirPath);
+    });
+
+    test("指定された相対パスが存在する場合、ディレクトリパスを返すこと", () => {
+      const req = { prompt: "#dir:relative/path/to/dir" } as vscode.ChatRequest;
+
+      const workspaceRoot = "/workspace/root";
+      mockWorkspaceFolders.value([{ uri: vscode.Uri.file(workspaceRoot) }]);
+
+      const dirPath = path.join(workspaceRoot, "relative/path/to/dir");
+      fsStub.existsSync.withArgs(dirPath).returns(true);
+
+      const result = getUserSpecifiedDirectory(req) as vscode.Uri;
+      assert.strictEqual(result.path, dirPath);
+    });
+
+    test("指定されたパスがダブルクォートで括られていても、ディレクトリとして扱えること", () => {
+      const req = { prompt: '#dir:"relative/ path / to / dir"' } as vscode.ChatRequest;
+
+      const workspaceRoot = "/workspace/root";
+      mockWorkspaceFolders.value([{ uri: vscode.Uri.file(workspaceRoot) }]);
+
+      const dirPath = path.join(workspaceRoot, "relative/ path / to / dir");
+      fsStub.existsSync.withArgs(dirPath).returns(true);
+
+      const result = getUserSpecifiedDirectory(req) as vscode.Uri;
+      assert.strictEqual(result.path, dirPath);
+    });
+
+    test("指定されたディレクトリが存在しない場合、undefinedを返すこと", () => {
+      const req = { prompt: "#dir:/non/existent/dir" } as vscode.ChatRequest;
+      fsStub.existsSync.withArgs("/non/existent/dir").returns(false);
+
+      const result = getUserSpecifiedDirectory(req);
+      assert.strictEqual(result, undefined);
+    });
+
+    test("ワークスペースが開かれていない場合、undefinedを返すこと", () => {
+      const req = { prompt: "#dir:relative/path/to/dir" } as vscode.ChatRequest;
+      mockWorkspaceFolders.value(undefined);
+
+      const result = getUserSpecifiedDirectory(req);
+      assert.strictEqual(result, undefined);
+    });
+
+    test("プロンプトにディレクトリが指定されていない場合、undefinedを返すこと", () => {
+      const req = { prompt: "no directory specified" } as vscode.ChatRequest;
+
+      const result = getUserSpecifiedDirectory(req);
+      assert.strictEqual(result, undefined);
     });
   });
 });
