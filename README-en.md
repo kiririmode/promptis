@@ -64,12 +64,12 @@ For prompt examples, please refer to our [Generative AI Engineering Utilization 
 
 ### Chat Variables
 
-The [chat variables](https://code.visualstudio.com/docs/copilot/copilot-chat#_chat-context) such as `#file` and `#dir` available in GitHub Copilot Chat can be used as is.  
+The [chat variables](https://code.visualstudio.com/docs/copilot/copilot-chat#_chat-context) such as `#file` and `#selection` available in GitHub Copilot Chat can be used as is.  
 In Promptis, you can also use the following chat variables:
 
 | Chat Variable | Description | Example |
 | ------------- | ----------- | ------- |
-| `#dir` | By including `#dir` in the prompt, you can specify the directory to which the prompt will be applied. The prompt will be executed on all files under the specified directory. | `@promptis /codereviewCodeStandards #dir` |
+| `#dir:[Directory]` | By including `#dir` in the prompt, you can specify the directory to which the prompt will be applied. The prompt will be executed on all files under the specified directory. You can also directly specify the directory in the format `#dir:path/to/dir`. | `@promptis /codereviewCodeStandards #dir` |
 | `#filter:[GlobPattern]` | By including `#filter:[GlobPattern]` in the prompt, you can narrow down the files extracted by the `#dir` specification to only those that match the GlobPattern. For the patterns that can be specified, refer to [GlobPattern](https://code.visualstudio.com/api/references/vscode-api#GlobPattern). | `@promptis /codereviewCodeStandards #dir #filter:**/*.{ts,js}`
 
 ## Requirements
