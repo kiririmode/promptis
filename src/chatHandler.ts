@@ -62,6 +62,11 @@ export const chatHandler: vscode.ChatRequestHandler = async (request, context, s
     return createErrorResponse(`No prompt files found in ${promptDir}`, stream);
   }
 
+  const outputDirPath = Config.getChatOutputDirPath();
+  if (outputDirPath && outputDirPath.length > 0) {
+    // ResponseStream をラップして、ファイルに保存するようにする
+    stream = new FileChatResponseStreamWrapper(stream, makeChatFilePath(outputDirPath));
+  }
   // ユーザの Chat Request 中で指定されたレビュー対象ファイルを取得する
   const targetFiles = await extractTargetFiles(request, stream);
   if (targetFiles.length > 0) {
@@ -205,15 +210,6 @@ export async function processContent(
     ];
 
     try {
-      // チャット内容保存ディレクトリを取得。有効な値が存在している場合は、ファイルに保存するようにする
-      const outputDirPath = Config.getChatOutputDirPath();
-      if (outputDirPath && outputDirPath.length > 0) {
-        // ResponseStream をラップして、ファイルに保存するようにする
-        stream = new FileChatResponseStreamWrapper(
-          stream,
-          makeChatFilePath(outputDirPath, promptFile, contentFilePath),
-        );
-      }
       stream.markdown(`## Review Details \n\n`);
       stream.markdown(`- Prompt: ${path.basename(promptFile)}\n`);
       stream.markdown(`- Target: ${path.basename(contentFilePath)}\n`);
@@ -262,16 +258,12 @@ export async function processContent(
  * チャット内容の保存先となるファイルパスを生成する
  *
  * @param {string} dirPath - 出力先ディレクトリのパス
- * @param {string} promptPath - プロンプトファイルのパス
- * @param {string} sourceFilePath - 処理対象ファイルのパス
  * @returns {string} 生成したファイルパス
  */
-export function makeChatFilePath(dirPath: string, promptPath: string, sourceFilePath: string): string {
-  const srcBasename = path.basename(sourceFilePath, path.extname(sourceFilePath));
-  const promptBasename = path.basename(promptPath, path.extname(promptPath));
+export function makeChatFilePath(dirPath: string): string {
   const timestamp = timestampAsString();
 
-  return path.join(dirPath, `${srcBasename}_${promptBasename}_${timestamp}.md`);
+  return path.join(dirPath, `Promptis_${timestamp}.md`);
 }
 
 export function createErrorResponse(message: string, stream: vscode.ChatResponseStream): vscode.ChatResult {
