@@ -49,7 +49,20 @@ suite("Util Test Suite", function () {
   });
 
   suite("extractTargetFiles Test Suite", function () {
-    test("extractTargetFiles should return file paths from request references", async function () {
+    let mockShowOpenDialog: sinon.SinonStub;
+    let mockFindFiles: sinon.SinonStub;
+
+    setup(function () {
+      mockShowOpenDialog = sinon.stub(vscode.window, "showOpenDialog");
+      mockFindFiles = sinon.stub(vscode.workspace, "findFiles");
+    });
+
+    teardown(function () {
+      mockShowOpenDialog.restore();
+      mockFindFiles.restore();
+    });
+
+    test("extractTargetFiles がリクエストの参照からファイルパスを返すべき", async function () {
       const req = {
         prompt: "hoge",
         references: [
@@ -69,9 +82,9 @@ suite("Util Test Suite", function () {
       assert.deepStrictEqual(result, ["/path/to/file2", "/path/to/file1"]);
     });
 
-    test("extractTargetFiles should handle empty references", async function () {
+    test("extractTargetFilesが参照なしのケースを処理できるべき", async function () {
       const req = {
-        prompt: "hoge",
+        prompt: "hoge #filter:*.md",
         references: [],
       } as unknown as vscode.ChatRequest;
       const stream = { markdown: sinon.stub(), progress: sinon.stub() } as unknown as vscode.ChatResponseStream;
@@ -80,7 +93,7 @@ suite("Util Test Suite", function () {
       assert.deepStrictEqual(result, []);
     });
 
-    test("extractTargetFiles should ignore non-file references", async function () {
+    test("extractTargetFilesがファイル以外のreferenceを無視すべき", async function () {
       const req = {
         prompt: "hoge",
         references: [
@@ -98,6 +111,24 @@ suite("Util Test Suite", function () {
 
       const result = await extractTargetFiles(req, stream);
       assert.deepStrictEqual(result, ["/path/to/file1"]);
+    });
+
+    test("extractTargetFilesが、プロンプトで#dirを指定されたときは指定ディレクトリ配下のファイルも返却すべき", async function () {
+      mockShowOpenDialog.resolves([vscode.Uri.file("/path/to/directory")]);
+      mockFindFiles.resolves([
+        vscode.Uri.file("/path/to/directory/file1.md"),
+        vscode.Uri.file("/path/to/directory/file2.md"),
+      ]);
+
+      const req = {
+        prompt: "hoge #dir:/path/to/dir",
+        references: [],
+      } as unknown as vscode.ChatRequest;
+
+      const stream = { markdown: sinon.stub(), progress: sinon.stub() } as unknown as vscode.ChatResponseStream;
+
+      const result = await extractTargetFiles(req, stream);
+      assert.deepStrictEqual(result, ["/path/to/directory/file1.md", "/path/to/directory/file2.md"]);
     });
   });
 
