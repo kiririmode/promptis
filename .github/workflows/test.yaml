@@ -10,6 +10,14 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - branch: main
+            artifact: main
+          - branch: ${{ github.head_ref }}
+            artifact: pull-request
+
     steps:
     - name: Checkout
       uses: actions/checkout@v4
@@ -29,5 +37,5 @@ jobs:
     - name: "Upload Coverage"
       uses: actions/upload-artifact@v4
       with:
-          name: coverage
+          name: coverage-${{ matrix.artifact }}
           path: coverage
