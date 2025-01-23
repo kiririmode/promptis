@@ -61,7 +61,7 @@ Chatウィンドウから @promptis に対して指示（コマンド）を出�
 | `codereviewCodeStandards`       | コード基準に関する一連のコードレビューを行う |
 | `codereviewFunctional`          | 機能観点のコードレビューを行う |
 | `codereviewNonFunctional`       | 非機能観点のコードレビューを行う |
-| `reverseEngineeringPromptPath`  | ソースコードに対するリバースエンジニアリングを行う |
+| `reverseEngineering`  | ソースコードに対するリバースエンジニアリングを行う |
 | `drawDiagrams`                  | ソースコードから図式を作成する |
 
 プロンプト例については、[生成AI エンジニアリング活用ガイド](https://fintan-contents.github.io/gai-dev-guide/prompts)にも公開しており、圧縮ファイルは[こちら](https://github.com/Fintan-contents/gai-dev-guide/releases)からダウンロードいただけます。
