@@ -11,7 +11,7 @@ const commandPromptDirectoryMap: CommandPromptPathMap = new Map([
   ["codereviewCodeStandards", Config.getCodeReviewStandardPath],
   ["codereviewFunctional", Config.getCodeReviewFunctionalPath],
   ["codereviewNonFunctional", Config.getCodeReviewNonFunctionalPath],
-  ["reverseEngineeringPromptPath", Config.getReverseEngineeringPromptPath],
+  ["reverseEngineering", Config.getReverseEngineeringPromptPath],
   ["drawDiagrams", Config.getDrawDiagramsPromptPath],
 ]);
 
