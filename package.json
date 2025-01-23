@@ -8,6 +8,7 @@
   "engines": {
     "vscode": "^1.93.0"
   },
+  "icon": "images/icon_128x128.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/Fintan-contents/promptis/"
@@ -43,6 +44,10 @@
           {
             "name": "codereviewNonFunctional",
             "description": "Review the Code With Non Functional Requirements"
+          },
+          {
+            "name": "reverseEngineeringPromptPath",
+            "description": "Reverse Engineer the Code"
           },
           {
             "name": "drawDiagrams",
