@@ -46,6 +46,10 @@
             "description": "Review the Code With Non Functional Requirements"
           },
           {
+            "name": "reverseEngineering",
+            "description": "Reverse Engineer the Code"
+          },
+          {
             "name": "drawDiagrams",
             "description": "Draw Diagrams from the Code"
           }

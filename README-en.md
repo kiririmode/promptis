@@ -52,12 +52,12 @@ The commands you can instruct are as follows:
 
 ### Command Map
 
-|Command Name|	Execution Content|
+|Command Name| Execution Content|
 |:-|:-|
 |`codereviewCodeStandards` | Conduct a series of code reviews on code standards |
-|`codereviewFunctional`	| Conduct a code review from a functional perspective |
-|`codereviewNonFunctional` |	Conduct a code review from a non-functional perspective |
-|`reverseEngineeringPromptPath` | Conduct reverse engineering on the source code |
+|`codereviewFunctional` | Conduct a code review from a functional perspective |
+|`codereviewNonFunctional` | Conduct a code review from a non-functional perspective |
+|`reverseEngineering` | Conduct reverse engineering on the source code |
 | `drawDiagrams` | Create diagrams from the source code |
 
 For prompt examples, please refer to our [Generative AI Engineering Utilization Guide](https://fintan-contents.github.io/gai-dev-guide/prompts). The compressed files can be downloaded from [here](https://github.com/Fintan-contents/gai-dev-guide/releases).
