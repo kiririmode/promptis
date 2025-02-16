@@ -171,17 +171,18 @@ export async function processContent(
     ];
 
     try {
-      stream.markdown(`## Review Details \n\n`);
-
-      // Workspaceのroot pathから相対パスで出力
-      const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-      if (workspaceRoot) {
-        stream.markdown(`- Prompt: ${path.relative(workspaceRoot, promptFile)}\n`);
-        stream.markdown(`- Target: ${path.relative(workspaceRoot, contentFilePath)}\n`);
-      } else {
-        stream.markdown(`- Prompt: ${promptFile}\n`);
-        stream.markdown(`- Target: ${contentFilePath}\n`);
+      // チャット内容保存ディレクトリを取得。有効な値が存在している場合は、ファイルに保存するようにする
+      const outputDirPath = Config.getChatOutputDirPath();
+      if (outputDirPath && outputDirPath.length > 0) {
+        // ResponseStream をラップして、ファイルに保存するようにする
+        stream = new FileChatResponseStreamWrapper(
+          stream,
+          makeChatFilePath(outputDirPath),
+        );
       }
+      stream.markdown(`## Review Details \n\n`);
+      stream.markdown(`- Prompt: ${path.basename(promptFile)}\n`);
+      stream.markdown(`- Target: ${path.basename(contentFilePath)}\n`);
       stream.markdown(`----\n`);
 
       // プロンプトを送信し、GitHub Copilot の AI モデルから応答を受信、出力する
