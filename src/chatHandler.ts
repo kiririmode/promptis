@@ -34,6 +34,8 @@ const commandPromptDirectoryMap: CommandPromptPathMap = new Map([
  * 7. デバッグ用にリクエストの詳細をコンソールに出力する。
  */
 export const chatHandler: vscode.ChatRequestHandler = async (request, context, stream, token) => {
+  const startTime = Date.now();
+
   // ユーザから、コマンドが指定されているか確認する
   const command = request.command;
   if (!command) {
@@ -70,6 +72,10 @@ export const chatHandler: vscode.ChatRequestHandler = async (request, context, s
     // ファイル指定がなければ、エディタで選択されている内容をレビューする
     await processSelectedContent(promptFiles, request.model, token, stream);
   }
+
+  const endTime = Date.now();
+  const duration = endTime - startTime; // ミリ秒
+  stream.markdown(`\n\nDuration: ${duration} ms\n`);
 };
 
 export function getPromptDirectory(command: string): string | undefined {
