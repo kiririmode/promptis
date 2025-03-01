@@ -72,7 +72,9 @@ suite("chatHandler Test Suite", function () {
         references: [],
         toolReferences: [],
         toolInvocationToken: {} as never,
-        model: {} as vscode.LanguageModelChat,
+        model: {
+          sendRequest: sinon.stub().resolves({ text: [""] }),
+        } as unknown as vscode.LanguageModelChat,
       };
       const { context, stream, token } = createPartOfChatRequest();
 
@@ -87,7 +89,9 @@ suite("chatHandler Test Suite", function () {
         references: [],
         toolReferences: [],
         toolInvocationToken: {} as never,
-        model: {} as vscode.LanguageModelChat,
+        model: {
+          sendRequest: sinon.stub().resolves({ text: [""] }),
+        } as unknown as vscode.LanguageModelChat,
       };
       const { context, stream, token } = createPartOfChatRequest();
 
@@ -102,7 +106,9 @@ suite("chatHandler Test Suite", function () {
         references: [],
         toolReferences: [],
         toolInvocationToken: {} as never,
-        model: {} as vscode.LanguageModelChat,
+        model: {
+          sendRequest: sinon.stub().resolves({ text: [""] }),
+        } as unknown as vscode.LanguageModelChat,
       };
       const { context, stream, token } = createPartOfChatRequest();
 
@@ -117,7 +123,9 @@ suite("chatHandler Test Suite", function () {
         references: [],
         toolReferences: [],
         toolInvocationToken: {} as never,
-        model: {} as vscode.LanguageModelChat,
+        model: {
+          sendRequest: sinon.stub().resolves({ text: [""] }),
+        } as unknown as vscode.LanguageModelChat,
       };
       const { context, stream, token } = createPartOfChatRequest();
 
@@ -147,7 +155,9 @@ suite("chatHandler Test Suite", function () {
         references: [{ id: "vscode.file", range: [12, 25], value: { $mid: 1, path: __filename, scheme: "file" } }],
         toolReferences: [],
         toolInvocationToken: {} as never,
-        model: {} as vscode.LanguageModelChat,
+        model: {
+          sendRequest: sinon.stub().resolves({ text: [""] }),
+        } as unknown as vscode.LanguageModelChat,
       };
       const { context, stream, token } = createPartOfChatRequest();
 
