@@ -79,7 +79,7 @@ suite("Util Test Suite", function () {
       const stream = { markdown: sinon.stub(), progress: sinon.stub() } as unknown as vscode.ChatResponseStream;
 
       const result = await extractTargetFiles(req, stream);
-      assert.deepStrictEqual(result, ["/path/to/file2", "/path/to/file1"]);
+      assert.deepStrictEqual(result, ["/path/to/file1", "/path/to/file2"]);
     });
 
     test("extractTargetFilesが参照なしのケースを処理できるべき", async function () {
@@ -98,19 +98,23 @@ suite("Util Test Suite", function () {
         prompt: "hoge",
         references: [
           {
-            id: "vscode.file",
+            id: "vscode.hoge",
             value: vscode.Uri.file("/path/to/file1"),
           },
           {
-            id: "vscode.other",
+            id: "vscode.fuga",
             value: vscode.Uri.file("/path/to/file2"),
+          },
+          {
+            id: "vscode.piyo",
+            value: "this is string type",
           },
         ],
       } as unknown as vscode.ChatRequest;
       const stream = { markdown: sinon.stub(), progress: sinon.stub() } as unknown as vscode.ChatResponseStream;
 
       const result = await extractTargetFiles(req, stream);
-      assert.deepStrictEqual(result, ["/path/to/file1"]);
+      assert.deepStrictEqual(result, ["/path/to/file1", "/path/to/file2"]);
     });
 
     test("extractTargetFilesが、プロンプトで#dirを指定されたときは指定ディレクトリ配下のファイルも返却すべき", async function () {
