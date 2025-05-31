@@ -152,6 +152,8 @@ export async function extractTargetFiles(
     srcPaths.push(...paths);
   }
 
+  console.info(JSON.stringify(req.references, null, 2));
+
   for (let i = 0; i < req.references.length; i++) {
     const ref = req.references[i];
 
@@ -164,7 +166,22 @@ export async function extractTargetFiles(
     // ref.id は不定なので、instanceof で型を確認する
     if (ref.value && ref.value instanceof vscode.Uri) {
       const uri = ref.value as vscode.Uri;
-      srcPaths.push(uriToPath(uri));
+      const filePath = uriToPath(uri);
+
+      if (fs.statSync(filePath).isDirectory()) {
+        stream.markdown(
+          `The following files under the specified directory \`${filePath}\` will be added as targets for prompt application.\n\n`,
+        );
+        // 指定されたディレクトリの全ファイルを対象とする
+        const fileUris = await vscode.workspace.findFiles(new vscode.RelativePattern(uri, filterPattern));
+        for (const fileUri of fileUris) {
+          const fileRelPath = path.relative(filePath, uriToPath(fileUri));
+          stream.markdown(`- ${path.join(path.basename(filePath), fileRelPath)}\n`);
+          srcPaths.push(uriToPath(fileUri));
+        }
+      } else {
+        srcPaths.push(uriToPath(uri));
+      }
     }
   }
   const uniqueSrcPaths = srcPaths.filter((item, index) => srcPaths.indexOf(item) === index);
