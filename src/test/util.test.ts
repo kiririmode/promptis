@@ -57,6 +57,7 @@ suite("Util Test Suite", function () {
       mockShowOpenDialog = sinon.stub(vscode.window, "showOpenDialog");
       mockFindFiles = sinon.stub(vscode.workspace, "findFiles");
       fsStub.existsSync.reset();
+      fsStub.statSync.reset();
     });
 
     teardown(function () {
