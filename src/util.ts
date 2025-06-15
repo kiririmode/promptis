@@ -197,7 +197,7 @@ export async function extractTargetFiles(
       }
     }
   }
-  const uniqueSrcPaths = srcPaths.filter((item, index) => srcPaths.indexOf(item) === index);
+  const uniqueSrcPaths = Array.from(new Set(srcPaths));
 
   // 処理対象ファイルを出力し終えたことを示すために、区切り線を表示する
   stream.markdown(`----\n\n`);
