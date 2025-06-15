@@ -73,22 +73,47 @@ function uriToPath(uri: vscode.Uri): string {
 }
 
 /**
- * 指定されたディレクトリ内のファイルを取得し、そのパスを返す関数。
+ * 指定されたディレクトリ内のファイルを処理し、そのパスを返す共通関数。
+ * @param {vscode.Uri} dirUri - 処理するディレクトリのURI
  * @param {string} filterPattern - フィルタリングパターン
  * @param {vscode.ChatResponseStream} stream - Chat Response Stream
- * @returns {string[]} - ファイルのパスの配列
- * @example
- * const files = await extractFilesInDirectory('/path/to/directory', stream);
- * console.log(files);
+ * @param {string} messagePrefix - ストリーム出力時のメッセージプレフィックス
+ * @returns {Promise<string[]>} - ファイルのパスの配列
+ */
+async function processDirectoryFiles(
+  dirUri: vscode.Uri,
+  filterPattern: string,
+  stream: vscode.ChatResponseStream,
+  messagePrefix: string,
+): Promise<string[]> {
+  const srcPaths: string[] = [];
+  const dirPath = uriToPath(dirUri);
+
+  stream.markdown(`${messagePrefix} \`${dirPath}\` will be added as targets for prompt application.\n\n`);
+
+  // 指定されたディレクトリの全ファイルを対象とする
+  const fileUris = await vscode.workspace.findFiles(new vscode.RelativePattern(dirUri, filterPattern));
+  for (const fileUri of fileUris) {
+    const fileRelPath = path.relative(dirPath, uriToPath(fileUri));
+    stream.markdown(`- ${path.join(path.basename(dirPath), fileRelPath)}\n`);
+    srcPaths.push(uriToPath(fileUri));
+  }
+
+  return srcPaths;
+}
+
+/**
+ * 指定されたディレクトリ内のファイルを取得し、そのパスを返す関数。
+ * @param {vscode.ChatRequest} req - Chat Request
+ * @param {string} filterPattern - フィルタリングパターン
+ * @param {vscode.ChatResponseStream} stream - Chat Response Stream
+ * @returns {Promise<string[]>} - ファイルのパスの配列
  */
 export async function extractFilesInDirectory(
   req: vscode.ChatRequest,
   filterPattern: string,
   stream: vscode.ChatResponseStream,
 ): Promise<string[]> {
-  // 処理対象ソースファイルのパスを格納する配列
-  const srcPaths: string[] = [];
-
   // ディレクトリが明示的に指定されている場合は非 undefined となる
   let dirUri = getUserSpecifiedDirectory(req);
   if (!dirUri) {
@@ -105,20 +130,12 @@ export async function extractFilesInDirectory(
     dirUri = dirUris[0];
   }
 
-  const dirPath = uriToPath(dirUri);
-  stream.markdown(
-    `You specified \`#dir\`, so the following files under the specified directory \`${dirPath}\` will be added as targets for prompt application.\n\n`,
+  return processDirectoryFiles(
+    dirUri,
+    filterPattern,
+    stream,
+    "You specified `#dir`, so the following files under the specified directory",
   );
-
-  // 指定されたディレクトリの全ファイルを対象とする
-  const fileUris = await vscode.workspace.findFiles(new vscode.RelativePattern(dirUri, filterPattern));
-  for (const fileUri of fileUris) {
-    const fileRelPath = path.relative(dirPath, uriToPath(fileUri));
-    stream.markdown(`- ${path.join(path.basename(dirPath), fileRelPath)}\n`);
-    srcPaths.push(uriToPath(fileUri));
-  }
-
-  return srcPaths;
 }
 
 /**
@@ -167,16 +184,13 @@ export async function extractTargetFiles(
       const filePath = uriToPath(uri);
 
       if (fs.statSync(filePath).isDirectory()) {
-        stream.markdown(
-          `The following files under the specified directory \`${filePath}\` will be added as targets for prompt application.\n\n`,
+        const directoryFiles = await processDirectoryFiles(
+          uri,
+          filterPattern,
+          stream,
+          "The following files under the specified directory",
         );
-        // 指定されたディレクトリの全ファイルを対象とする
-        const fileUris = await vscode.workspace.findFiles(new vscode.RelativePattern(uri, filterPattern));
-        for (const fileUri of fileUris) {
-          const fileRelPath = path.relative(filePath, uriToPath(fileUri));
-          stream.markdown(`- ${path.join(path.basename(filePath), fileRelPath)}\n`);
-          srcPaths.push(uriToPath(fileUri));
-        }
+        srcPaths.push(...directoryFiles);
       } else {
         srcPaths.push(uriToPath(uri));
       }
