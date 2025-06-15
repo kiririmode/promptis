@@ -169,7 +169,8 @@ export async function extractTargetFiles(
     srcPaths.push(...paths);
   }
 
-  for (let i = 0; i < req.references.length; i++) {
+  // references は出現順の逆順になるため、末尾から処理する
+  for (let i = req.references.length - 1; i >= 0; i--) {
     const ref = req.references[i];
 
     // referenceがファイルの場合、当該ファイルの内容を返す

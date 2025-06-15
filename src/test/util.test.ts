@@ -97,10 +97,10 @@ suite("Util Test Suite", function () {
 
       const result = await extractTargetFiles(req, stream);
       assert.deepStrictEqual(result, [
-        "/path/to/file1",
-        "/path/to/file2",
         "/path/to/dir/file1.md",
         "/path/to/dir/file2.md",
+        "/path/to/file2",
+        "/path/to/file1",
       ]);
     });
 
@@ -139,7 +139,7 @@ suite("Util Test Suite", function () {
       const stream = { markdown: sinon.stub(), progress: sinon.stub() } as unknown as vscode.ChatResponseStream;
 
       const result = await extractTargetFiles(req, stream);
-      assert.deepStrictEqual(result, ["/path/to/file1", "/path/to/file2"]);
+      assert.deepStrictEqual(result, ["/path/to/file2", "/path/to/file1"]);
     });
 
     test("extractTargetFilesが、プロンプトで#dirを指定されたときは指定ディレクトリ配下のファイルも返却すべき", async function () {
@@ -330,7 +330,10 @@ suite("Util Test Suite", function () {
       assert.deepStrictEqual(result, ["/path/to/directory/file1.md", "/path/to/directory/subdir/file2.md"]);
 
       sinon.assert.calledThrice(mockMarkdown);
-      sinon.assert.calledWith(mockMarkdown.firstCall, "Test message `/path/to/directory` will be added as targets for prompt application.\n\n");
+      sinon.assert.calledWith(
+        mockMarkdown.firstCall,
+        "Test message `/path/to/directory` will be added as targets for prompt application.\n\n",
+      );
       sinon.assert.calledWith(mockMarkdown.secondCall, "- directory/file1.md\n");
       sinon.assert.calledWith(mockMarkdown.thirdCall, "- directory/subdir/file2.md\n");
     });
@@ -346,7 +349,10 @@ suite("Util Test Suite", function () {
 
       assert.deepStrictEqual(result, []);
       sinon.assert.calledOnce(mockMarkdown);
-      sinon.assert.calledWith(mockMarkdown, "Empty directory test `/path/to/empty/directory` will be added as targets for prompt application.\n\n");
+      sinon.assert.calledWith(
+        mockMarkdown,
+        "Empty directory test `/path/to/empty/directory` will be added as targets for prompt application.\n\n",
+      );
     });
 
     test("異なるフィルタパターンで正しくファイルを処理すべき", async function () {
@@ -364,7 +370,10 @@ suite("Util Test Suite", function () {
       assert.deepStrictEqual(result, ["/project/src/main.ts", "/project/src/utils/helper.js"]);
 
       sinon.assert.calledThrice(mockMarkdown);
-      sinon.assert.calledWith(mockMarkdown.firstCall, "JavaScript/TypeScript files `/project/src` will be added as targets for prompt application.\n\n");
+      sinon.assert.calledWith(
+        mockMarkdown.firstCall,
+        "JavaScript/TypeScript files `/project/src` will be added as targets for prompt application.\n\n",
+      );
       sinon.assert.calledWith(mockMarkdown.secondCall, "- src/main.ts\n");
       sinon.assert.calledWith(mockMarkdown.thirdCall, "- src/utils/helper.js\n");
     });
@@ -387,7 +396,10 @@ suite("Util Test Suite", function () {
       ]);
 
       sinon.assert.calledThrice(mockMarkdown);
-      sinon.assert.calledWith(mockMarkdown.firstCall, "Markdown files `/very/long/path/to/project` will be added as targets for prompt application.\n\n");
+      sinon.assert.calledWith(
+        mockMarkdown.firstCall,
+        "Markdown files `/very/long/path/to/project` will be added as targets for prompt application.\n\n",
+      );
       sinon.assert.calledWith(mockMarkdown.secondCall, "- project/README.md\n");
       sinon.assert.calledWith(mockMarkdown.thirdCall, "- project/CHANGELOG.md\n");
     });
@@ -404,7 +416,10 @@ suite("Util Test Suite", function () {
       assert.deepStrictEqual(result, ["/home/user/docs/README.md"]);
 
       sinon.assert.calledTwice(mockMarkdown);
-      sinon.assert.calledWith(mockMarkdown.firstCall, "Single file `/home/user/docs` will be added as targets for prompt application.\n\n");
+      sinon.assert.calledWith(
+        mockMarkdown.firstCall,
+        "Single file `/home/user/docs` will be added as targets for prompt application.\n\n",
+      );
       sinon.assert.calledWith(mockMarkdown.secondCall, "- docs/README.md\n");
     });
   });
