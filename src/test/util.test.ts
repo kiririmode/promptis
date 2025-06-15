@@ -14,6 +14,9 @@ import { extractFilesInDirectory, findPromptFiles, timestampAsString } from "../
 const fsStub = {
   existsSync: sinon.stub(),
   statSync: sinon.stub(),
+  promises: {
+    stat: sinon.stub(),
+  },
 };
 const { getUserSpecifiedDirectory, extractTargetFiles } = proxyquire("../util", { fs: fsStub });
 
@@ -58,6 +61,7 @@ suite("Util Test Suite", function () {
       mockFindFiles = sinon.stub(vscode.workspace, "findFiles");
       fsStub.existsSync.reset();
       fsStub.statSync.reset();
+      fsStub.promises.stat.reset();
     });
 
     teardown(function () {
@@ -84,9 +88,9 @@ suite("Util Test Suite", function () {
         ],
       } as unknown as vscode.ChatRequest;
 
-      fsStub.statSync.withArgs("/path/to/file1").returns({ isDirectory: () => false });
-      fsStub.statSync.withArgs("/path/to/file2").returns({ isDirectory: () => false });
-      fsStub.statSync.withArgs("/path/to/dir").returns({ isDirectory: () => true });
+      fsStub.promises.stat.withArgs("/path/to/file1").resolves({ isDirectory: () => false });
+      fsStub.promises.stat.withArgs("/path/to/file2").resolves({ isDirectory: () => false });
+      fsStub.promises.stat.withArgs("/path/to/dir").resolves({ isDirectory: () => true });
       mockFindFiles.resolves([vscode.Uri.file("/path/to/dir/file1.md"), vscode.Uri.file("/path/to/dir/file2.md")]);
 
       const stream = { markdown: sinon.stub(), progress: sinon.stub() } as unknown as vscode.ChatResponseStream;
@@ -130,8 +134,8 @@ suite("Util Test Suite", function () {
         ],
       } as unknown as vscode.ChatRequest;
 
-      fsStub.statSync.withArgs("/path/to/file1").returns({ isDirectory: () => false });
-      fsStub.statSync.withArgs("/path/to/file2").returns({ isDirectory: () => false });
+      fsStub.promises.stat.withArgs("/path/to/file1").resolves({ isDirectory: () => false });
+      fsStub.promises.stat.withArgs("/path/to/file2").resolves({ isDirectory: () => false });
       const stream = { markdown: sinon.stub(), progress: sinon.stub() } as unknown as vscode.ChatResponseStream;
 
       const result = await extractTargetFiles(req, stream);

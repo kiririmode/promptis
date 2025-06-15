@@ -183,7 +183,8 @@ export async function extractTargetFiles(
       const uri = ref.value as vscode.Uri;
       const filePath = uriToPath(uri);
 
-      if (fs.statSync(filePath).isDirectory()) {
+      const stats = await fs.promises.stat(filePath);
+      if (stats.isDirectory()) {
         const directoryFiles = await processDirectoryFiles(
           uri,
           filterPattern,
