@@ -80,7 +80,7 @@ function uriToPath(uri: vscode.Uri): string {
  * @param {string} messagePrefix - ストリーム出力時のメッセージプレフィックス
  * @returns {Promise<string[]>} - ファイルのパスの配列
  */
-async function processDirectoryFiles(
+export async function processDirectoryFiles(
   dirUri: vscode.Uri,
   filterPattern: string,
   stream: vscode.ChatResponseStream,
