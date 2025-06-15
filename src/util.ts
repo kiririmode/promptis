@@ -152,8 +152,6 @@ export async function extractTargetFiles(
     srcPaths.push(...paths);
   }
 
-  console.info(JSON.stringify(req.references, null, 2));
-
   for (let i = 0; i < req.references.length; i++) {
     const ref = req.references[i];
 
