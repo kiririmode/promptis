@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0]
+
+- Fixed an issue where file references were not being processed correctly and enhanced directory file processing with optimized duplicate removal ([#70](https://github.com/Fintan-contents/promptis/pull/70))
+
 ## [1.2.0]
 
 - Choose which model version to use for a prompt execution. ([#27](https://github.com/Fintan-contents/promptis/pull/27))
