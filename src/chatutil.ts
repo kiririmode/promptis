@@ -70,10 +70,26 @@ export class FileChatResponseStreamWrapper implements FileChatResponseStream {
       const fullPath = path.resolve(this.filePath);
       // コンテンツをファイルに書き込む
       fs.writeFileSync(fullPath, this.content.join(""), "utf8");
+      // メモリリークを防ぐために書き込み後にコンテンツをクリア
+      this.clearContent();
     } catch (error) {
       console.error("Failed to write file:", error);
       vscode.window.showErrorMessage("Failed to write file: " + error);
       throw error;
     }
+  }
+
+  /**
+   * 累積したコンテンツをクリアする
+   */
+  clearContent(): void {
+    this.content = [];
+  }
+
+  /**
+   * リソースを解放する
+   */
+  dispose(): void {
+    this.clearContent();
   }
 }

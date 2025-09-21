@@ -132,4 +132,51 @@ suite("FileChatResponseStream Test Suite", function () {
     sinon.assert.calledOnce(mockOriginalStream.push as sinon.SinonSpy);
     sinon.assert.calledWith(mockOriginalStream.push as sinon.SinonSpy, part);
   });
+
+  test("clearContentメソッドがcontent配列をクリアすること", function () {
+    const filePath = "test/path";
+    const stream = new FileChatResponseStreamWrapper(mockOriginalStream, filePath);
+
+    // コンテンツを追加
+    stream.markdown("test content 1");
+    stream.markdown("test content 2");
+    assert.strictEqual(stream["content"].length, 2);
+
+    // コンテンツをクリア
+    stream.clearContent();
+    assert.strictEqual(stream["content"].length, 0);
+    assert.deepStrictEqual(stream["content"], []);
+  });
+
+  test("disposeメソッドがcontent配列をクリアすること", function () {
+    const filePath = "test/path";
+    const stream = new FileChatResponseStreamWrapper(mockOriginalStream, filePath);
+
+    // コンテンツを追加
+    stream.markdown("test content 1");
+    stream.markdown("test content 2");
+    assert.strictEqual(stream["content"].length, 2);
+
+    // リソースを解放
+    stream.dispose();
+    assert.strictEqual(stream["content"].length, 0);
+    assert.deepStrictEqual(stream["content"], []);
+  });
+
+  test("writeToFileメソッドが書き込み後にコンテンツをクリアすること", function () {
+    const filePath = path.normalize(`${__dirname}/../../out/test_clear_content`);
+    const stream = new FileChatResponseStreamWrapper(mockOriginalStream, filePath);
+
+    // コンテンツを追加
+    stream.markdown("test content 1");
+    stream.markdown("test content 2");
+    assert.strictEqual(stream["content"].length, 2);
+
+    // ファイルに書き込み
+    stream.writeToFile();
+
+    // 書き込み後にコンテンツがクリアされていること
+    assert.strictEqual(stream["content"].length, 0);
+    assert.deepStrictEqual(stream["content"], []);
+  });
 });

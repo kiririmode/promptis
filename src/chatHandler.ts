@@ -218,6 +218,8 @@ export async function processContent(
       stream.markdown("\n\n");
       if (stream instanceof FileChatResponseStreamWrapper) {
         stream.writeToFile();
+        // メモリリークを防ぐために明示的にリソースを解放
+        stream.dispose();
       }
     }
   }
