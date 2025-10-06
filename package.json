@@ -103,6 +103,16 @@
           "description": "Enable telemetry to help improve the extension",
           "default": true,
           "order": 8
+        },
+        "promptis.output.mode": {
+          "type": "string",
+          "enum": [
+            "chat-only",
+            "file-only"
+          ],
+          "default": "chat-only",
+          "description": "Output mode for review results. 'chat-only' shows detailed output in chat window, 'file-only' minimizes chat output and saves detailed results to file.",
+          "order": 9
         }
       }
     },

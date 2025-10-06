@@ -4,6 +4,7 @@ import * as vscode from "vscode";
 import { postUsage } from "./api";
 import { FileChatResponseStreamWrapper } from "./chatutil";
 import { Config } from "./config";
+import { OutputStrategyFactory } from "./output";
 import { extractTargetFiles, findPromptFiles, timestampAsString } from "./util";
 
 type CommandPromptPathMap = Map<string, () => string | undefined>;
@@ -96,11 +97,12 @@ export async function processSourceFiles(
 ): Promise<void> {
   let counter = 0;
   const sourceNum = sourcePaths.length;
+  const outputMode = Config.getOutputMode();
+  const strategy = OutputStrategyFactory.create(outputMode);
 
   // ソースファイルを軸にして、プロンプトを適用していく
   for (const sourcePath of sourcePaths) {
-    stream.markdown(`progress: ${counter + 1}/${sourceNum}\n`);
-    stream.markdown(`----\n`);
+    strategy.outputProgress(counter, sourceNum, stream);
 
     const content = fs.readFileSync(sourcePath, { encoding: "utf8" });
     await processContent(content, sourcePath, promptPaths, model, token, stream);
@@ -163,6 +165,9 @@ export async function processContent(
   token: vscode.CancellationToken,
   stream: vscode.ChatResponseStream,
 ): Promise<void> {
+  const outputMode = Config.getOutputMode();
+  const strategy = OutputStrategyFactory.create(outputMode);
+
   for (const promptFile of promptFiles) {
     const promptContent = fs.readFileSync(promptFile, "utf8");
     const messages = [
@@ -171,24 +176,11 @@ export async function processContent(
     ];
 
     try {
-      stream.markdown(`## Review Details \n\n`);
-
-      // Workspaceのroot pathから相対パスで出力
-      const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-      if (workspaceRoot) {
-        stream.markdown(`- Prompt: ${path.relative(workspaceRoot, promptFile)}\n`);
-        stream.markdown(`- Target: ${path.relative(workspaceRoot, contentFilePath)}\n`);
-      } else {
-        stream.markdown(`- Prompt: ${promptFile}\n`);
-        stream.markdown(`- Target: ${contentFilePath}\n`);
-      }
-      stream.markdown(`----\n`);
+      strategy.outputReviewDetails(promptFile, contentFilePath, stream);
 
       // プロンプトを送信し、GitHub Copilot の AI モデルから応答を受信、出力する
       const res = await model.sendRequest(messages, {}, token);
-      for await (const fragment of res.text) {
-        stream.markdown(fragment);
-      }
+      await strategy.outputReviewResult(res.text, stream);
     } catch (error) {
       if (error instanceof vscode.LanguageModelError) {
         switch (error.code) {

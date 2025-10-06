@@ -62,6 +62,15 @@ export class FileChatResponseStreamWrapper implements FileChatResponseStream {
   }
 
   /**
+   * ChatWindow非経由でファイルに直接書き込み
+   * content配列にのみ蓄積し、originalStream.markdown()は呼び出さない
+   * @param {string} text - 書き込み対象のテキスト
+   */
+  writeDirectToFile(text: string): void {
+    this.content.push(text);
+  }
+
+  /**
    * 保存用に累積したコンテンツをファイルに書き込む
    */
   writeToFile(): void {
