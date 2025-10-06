@@ -63,7 +63,8 @@ export const chatHandler: vscode.ChatRequestHandler = async (request, context, s
   // file-onlyモードでoutputPathが未設定の場合に警告
   warnIfFileOnlyWithoutOutputPath(outputMode, outputDirPath);
 
-  if (outputDirPath && outputDirPath.length > 0) {
+  // file-onlyモードの場合のみファイル出力を有効化
+  if (outputMode === "file-only" && outputDirPath && outputDirPath.length > 0) {
     // ResponseStream をラップして、ファイルに保存するようにする
     stream = new FileChatResponseStreamWrapper(stream, makeChatFilePath(outputDirPath));
   }
