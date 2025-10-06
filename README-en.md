@@ -20,6 +20,7 @@ Promptis is a Visual Studio Code (VS Code) Extension that semi-automates prompt 
 - **Reduced Prompt Input Effort**: Automatic execution of prompts reduces manual input tasks, allowing you to focus on development.
 - **Consistent Code Reviews**: Unified prompts improve the quality and consistency of code reviews.
 - **Faster Feedback**: Automatic execution of prompts speeds up code reviews and feedback, shortening the development cycle.
+- **Flexible Output Control**: Output mode settings allow you to reduce ChatWindow load while performing large-scale file reviews.
 
 ## How to Install
 
@@ -94,7 +95,8 @@ In Promptis, you can also use the following chat variables:
 |`reverseEngineering.promptsPath` |string| |Absolute path to the reverse engineering prompt storage directory.|
 |`drawDiagrams.promptsPath`|string| |Absolute path to the prompt directory for diagram creation.|
 |`prompt.excludeFilePatterns`|array of string| |Patterns of file names in the prompt storage directory that should not be executed (e.g., `**/dir/*.md`). Refer to minimatch-cheat-sheet for the patterns that can be described.|
-|`chat.outputPath`|string| |Absolute path to the directory for backup output of chat content.|
+|`promptis.output.mode`|string|`chat-only`|Output mode. `chat-only` displays results in ChatWindow, `file-only` outputs only to files and reduces ChatWindow load.|
+|`chat.outputPath`|string| |Absolute path to the directory for backup output of chat content (required for `file-only` mode).|
 |`telemetry.enable`|boolean|true|Whether to send telemetry information indicating usage.|
 
 ## Telemetry
