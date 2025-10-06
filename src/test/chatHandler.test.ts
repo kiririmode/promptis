@@ -244,6 +244,84 @@ suite("processSelectedContent Test Suite", function () {
   });
 });
 
+suite("warnIfFileOnlyWithoutOutputPath Test Suite", function () {
+  let mockShowWarningMessage: sinon.SinonStub;
+  let mockExecuteCommand: sinon.SinonStub;
+
+  setup(function () {
+    mockShowWarningMessage = sinon.stub(vscode.window, "showWarningMessage").resolves(undefined);
+    mockExecuteCommand = sinon.stub(vscode.commands, "executeCommand").resolves(undefined);
+  });
+
+  teardown(function () {
+    mockShowWarningMessage.restore();
+    mockExecuteCommand.restore();
+  });
+
+  test("file-onlyモードでoutputPathがundefinedの場合、警告を表示すること", function () {
+    chatHandlerModule.warnIfFileOnlyWithoutOutputPath("file-only", undefined);
+
+    sinon.assert.calledOnce(mockShowWarningMessage);
+    sinon.assert.calledWith(
+      mockShowWarningMessage,
+      "Output mode is set to 'file-only' but 'chat.outputPath' is not configured. Results will be displayed in chat window instead.",
+      "Open Settings",
+    );
+  });
+
+  test("file-onlyモードでoutputPathが空文字列の場合、警告を表示すること", function () {
+    chatHandlerModule.warnIfFileOnlyWithoutOutputPath("file-only", "");
+
+    sinon.assert.calledOnce(mockShowWarningMessage);
+    sinon.assert.calledWith(
+      mockShowWarningMessage,
+      "Output mode is set to 'file-only' but 'chat.outputPath' is not configured. Results will be displayed in chat window instead.",
+      "Open Settings",
+    );
+  });
+
+  test("file-onlyモードでoutputPathが設定されている場合、警告を表示しないこと", function () {
+    chatHandlerModule.warnIfFileOnlyWithoutOutputPath("file-only", "/some/path");
+
+    sinon.assert.notCalled(mockShowWarningMessage);
+  });
+
+  test("chat-onlyモードでoutputPathがundefinedの場合、警告を表示しないこと", function () {
+    chatHandlerModule.warnIfFileOnlyWithoutOutputPath("chat-only", undefined);
+
+    sinon.assert.notCalled(mockShowWarningMessage);
+  });
+
+  test("chat-onlyモードでoutputPathが空文字列の場合、警告を表示しないこと", function () {
+    chatHandlerModule.warnIfFileOnlyWithoutOutputPath("chat-only", "");
+
+    sinon.assert.notCalled(mockShowWarningMessage);
+  });
+
+  test("ユーザーが'Open Settings'をクリックした場合、設定画面を開くコマンドを実行すること", async function () {
+    mockShowWarningMessage.resolves("Open Settings");
+
+    chatHandlerModule.warnIfFileOnlyWithoutOutputPath("file-only", undefined);
+
+    // Promiseが解決されるまで待機
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    sinon.assert.calledOnce(mockExecuteCommand);
+    sinon.assert.calledWith(mockExecuteCommand, "workbench.action.openSettings", "chat.outputPath");
+  });
+
+  test("ユーザーが警告を閉じた場合、コマンドを実行しないこと", async function () {
+    mockShowWarningMessage.resolves(undefined);
+
+    chatHandlerModule.warnIfFileOnlyWithoutOutputPath("file-only", undefined);
+
+    // Promiseが解決されるまで待機
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    sinon.assert.notCalled(mockExecuteCommand);
+  });
+});
+
 suite("processContent Test Suite", function () {
   test("processContent should handle blocked request error", async function () {
     const content = "test content";

@@ -71,14 +71,15 @@ export class FileChatResponseStreamWrapper implements FileChatResponseStream {
   }
 
   /**
-   * 保存用に累積したコンテンツをファイルに書き込む
+   * 保存用に累積したコンテンツをファイルに追記する
+   * 複数回呼び出すことで、全ての処理結果を1つのファイルに蓄積できる
    */
   writeToFile(): void {
     try {
       // ファイルパスを絶対パスに変換
       const fullPath = path.resolve(this.filePath);
-      // コンテンツをファイルに書き込む
-      fs.writeFileSync(fullPath, this.content.join(""), "utf8");
+      // コンテンツをファイルに追記（複数回の処理結果を全て保存）
+      fs.appendFileSync(fullPath, this.content.join(""), "utf8");
       // メモリリークを防ぐために書き込み後にコンテンツをクリア
       this.clearContent();
     } catch (error) {

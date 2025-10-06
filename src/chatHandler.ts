@@ -58,6 +58,11 @@ export const chatHandler: vscode.ChatRequestHandler = async (request, context, s
   }
 
   const outputDirPath = Config.getChatOutputDirPath();
+  const outputMode = Config.getOutputMode();
+
+  // file-onlyモードでoutputPathが未設定の場合に警告
+  warnIfFileOnlyWithoutOutputPath(outputMode, outputDirPath);
+
   if (outputDirPath && outputDirPath.length > 0) {
     // ResponseStream をラップして、ファイルに保存するようにする
     stream = new FileChatResponseStreamWrapper(stream, makeChatFilePath(outputDirPath));
@@ -210,10 +215,35 @@ export async function processContent(
       stream.markdown("\n\n");
       if (stream instanceof FileChatResponseStreamWrapper) {
         stream.writeToFile();
-        // メモリリークを防ぐために明示的にリソースを解放
+        // writeToFile()内で既にclearContent()が呼ばれているが、
+        // 明示的なリソース解放パターンとして、また将来的に
+        // ファイルハンドル等の追加リソース管理の可能性を考慮してdispose()を呼び出す
         stream.dispose();
       }
     }
+  }
+}
+
+/**
+ * file-onlyモードでoutputPathが未設定の場合に警告を表示
+ * @param {string} outputMode - 出力モード
+ * @param {string | undefined} outputDirPath - 出力ディレクトリパス
+ */
+export function warnIfFileOnlyWithoutOutputPath(
+  outputMode: "chat-only" | "file-only",
+  outputDirPath: string | undefined,
+): void {
+  if (outputMode === "file-only" && (!outputDirPath || outputDirPath.length === 0)) {
+    vscode.window
+      .showWarningMessage(
+        "Output mode is set to 'file-only' but 'chat.outputPath' is not configured. Results will be displayed in chat window instead.",
+        "Open Settings",
+      )
+      .then((selection) => {
+        if (selection === "Open Settings") {
+          vscode.commands.executeCommand("workbench.action.openSettings", "chat.outputPath");
+        }
+      });
   }
 }
 
