@@ -139,3 +139,6 @@ dist
 # license files
 licenses
 prompt_demo
+
+# Serena tool configuration
+.serena/
