@@ -142,3 +142,6 @@ prompt_demo
 
 # Serena tool configuration
 .serena/
+
+# Claude Code local configuration
+.claude/settings.local.json
