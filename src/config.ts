@@ -97,4 +97,12 @@ export class Config {
   static getTelemetryEnabled(): boolean {
     return vscode.workspace.getConfiguration().get<boolean>("telemetry.enable", false);
   }
+
+  /**
+   * 出力モードを取得します。
+   * @returns 出力モード（"chat-only" | "file-only"）
+   */
+  static getOutputMode(): "chat-only" | "file-only" {
+    return vscode.workspace.getConfiguration().get<"chat-only" | "file-only">("promptis.output.mode", "chat-only");
+  }
 }

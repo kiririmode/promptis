@@ -4,6 +4,7 @@ import * as vscode from "vscode";
 import { postUsage } from "./api";
 import { FileChatResponseStreamWrapper } from "./chatutil";
 import { Config } from "./config";
+import { OutputStrategyFactory } from "./output";
 import { extractTargetFiles, findPromptFiles, timestampAsString } from "./util";
 
 type CommandPromptPathMap = Map<string, () => string | undefined>;
@@ -57,7 +58,13 @@ export const chatHandler: vscode.ChatRequestHandler = async (request, context, s
   }
 
   const outputDirPath = Config.getChatOutputDirPath();
-  if (outputDirPath && outputDirPath.length > 0) {
+  const outputMode = Config.getOutputMode();
+
+  // file-onlyモードでoutputPathが未設定の場合に警告
+  warnIfFileOnlyWithoutOutputPath(outputMode, outputDirPath);
+
+  // file-onlyモードの場合のみファイル出力を有効化
+  if (outputMode === "file-only" && outputDirPath && outputDirPath.length > 0) {
     // ResponseStream をラップして、ファイルに保存するようにする
     stream = new FileChatResponseStreamWrapper(stream, makeChatFilePath(outputDirPath));
   }
@@ -96,11 +103,12 @@ export async function processSourceFiles(
 ): Promise<void> {
   let counter = 0;
   const sourceNum = sourcePaths.length;
+  const outputMode = Config.getOutputMode();
+  const strategy = OutputStrategyFactory.create(outputMode);
 
   // ソースファイルを軸にして、プロンプトを適用していく
   for (const sourcePath of sourcePaths) {
-    stream.markdown(`progress: ${counter + 1}/${sourceNum}\n`);
-    stream.markdown(`----\n`);
+    strategy.outputProgress(counter, sourceNum, stream);
 
     const content = fs.readFileSync(sourcePath, { encoding: "utf8" });
     await processContent(content, sourcePath, promptPaths, model, token, stream);
@@ -163,6 +171,9 @@ export async function processContent(
   token: vscode.CancellationToken,
   stream: vscode.ChatResponseStream,
 ): Promise<void> {
+  const outputMode = Config.getOutputMode();
+  const strategy = OutputStrategyFactory.create(outputMode);
+
   for (const promptFile of promptFiles) {
     const promptContent = fs.readFileSync(promptFile, "utf8");
     const messages = [
@@ -171,24 +182,11 @@ export async function processContent(
     ];
 
     try {
-      stream.markdown(`## Review Details \n\n`);
-
-      // Workspaceのroot pathから相対パスで出力
-      const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-      if (workspaceRoot) {
-        stream.markdown(`- Prompt: ${path.relative(workspaceRoot, promptFile)}\n`);
-        stream.markdown(`- Target: ${path.relative(workspaceRoot, contentFilePath)}\n`);
-      } else {
-        stream.markdown(`- Prompt: ${promptFile}\n`);
-        stream.markdown(`- Target: ${contentFilePath}\n`);
-      }
-      stream.markdown(`----\n`);
+      strategy.outputReviewDetails(promptFile, contentFilePath, stream);
 
       // プロンプトを送信し、GitHub Copilot の AI モデルから応答を受信、出力する
       const res = await model.sendRequest(messages, {}, token);
-      for await (const fragment of res.text) {
-        stream.markdown(fragment);
-      }
+      await strategy.outputReviewResult(res.text, stream);
     } catch (error) {
       if (error instanceof vscode.LanguageModelError) {
         switch (error.code) {
@@ -218,8 +216,35 @@ export async function processContent(
       stream.markdown("\n\n");
       if (stream instanceof FileChatResponseStreamWrapper) {
         stream.writeToFile();
+        // writeToFile()内で既にclearContent()が呼ばれているが、
+        // 明示的なリソース解放パターンとして、また将来的に
+        // ファイルハンドル等の追加リソース管理の可能性を考慮してdispose()を呼び出す
+        stream.dispose();
       }
     }
+  }
+}
+
+/**
+ * file-onlyモードでoutputPathが未設定の場合に警告を表示
+ * @param {string} outputMode - 出力モード
+ * @param {string | undefined} outputDirPath - 出力ディレクトリパス
+ */
+export function warnIfFileOnlyWithoutOutputPath(
+  outputMode: "chat-only" | "file-only",
+  outputDirPath: string | undefined,
+): void {
+  if (outputMode === "file-only" && (!outputDirPath || outputDirPath.length === 0)) {
+    vscode.window
+      .showWarningMessage(
+        "Output mode is set to 'file-only' but 'chat.outputPath' is not configured. Results will be displayed in chat window instead.",
+        "Open Settings",
+      )
+      .then((selection) => {
+        if (selection === "Open Settings") {
+          vscode.commands.executeCommand("workbench.action.openSettings", "chat.outputPath");
+        }
+      });
   }
 }
 
