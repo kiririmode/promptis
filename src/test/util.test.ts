@@ -3,7 +3,7 @@ import * as path from "path";
 import proxyquire from "proxyquire";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
-import { extractFilesInDirectory, findPromptFiles, processDirectoryFiles, timestampAsString } from "../util";
+import { extractFilesInDirectory, filterPromptsByTarget, findPromptFiles, parsePromptFile, processDirectoryFiles, timestampAsString } from "../util";
 
 /*
  * fs.existsSync のスタブ
@@ -421,6 +421,106 @@ suite("Util Test Suite", function () {
         "Single file `/home/user/docs` will be added as targets for prompt application.\n\n",
       );
       sinon.assert.calledWith(mockMarkdown.secondCall, "- docs/README.md\n");
+    });
+  });
+
+  suite("Front Matter Parsing Test Suite", function () {
+    test("単一のapplyToパターンをパースできること", function () {
+      const testFile = path.join(__dirname, "..", "..", "src", "test", "__tests__", "frontmatter", "test_prompt_java.md");
+      const result = parsePromptFile(testFile);
+
+      assert.strictEqual(result.filePath, testFile);
+      assert.deepStrictEqual(result.applyToPatterns, ["*.java"]);
+      assert.strictEqual(result.content.trim(), "You are an excellent Java programmer responsible for Java coding standards.");
+    });
+
+    test("複数のapplyToパターンをパースできること", function () {
+      const testFile = path.join(__dirname, "..", "..", "src", "test", "__tests__", "frontmatter", "test_prompt_multi.md");
+      const result = parsePromptFile(testFile);
+
+      assert.strictEqual(result.filePath, testFile);
+      assert.deepStrictEqual(result.applyToPatterns, ["*.ts", "*.tsx"]);
+      assert.strictEqual(result.content.trim(), "You are a TypeScript/React expert.");
+    });
+
+    test("Front Matterがない場合は空配列を返すこと", function () {
+      const testFile = path.join(__dirname, "..", "..", "src", "test", "__tests__", "frontmatter", "test_prompt_no_frontmatter.md");
+      const result = parsePromptFile(testFile);
+
+      assert.strictEqual(result.filePath, testFile);
+      assert.deepStrictEqual(result.applyToPatterns, []);
+      assert.strictEqual(result.content.trim(), "You are a general code reviewer responsible for all file types.");
+    });
+
+    test("Front Matter部分がコンテンツから除外されること", function () {
+      const testFile = path.join(__dirname, "..", "..", "src", "test", "__tests__", "frontmatter", "test_prompt_java.md");
+      const result = parsePromptFile(testFile);
+
+      assert.strictEqual(result.content.includes("---"), false);
+      assert.strictEqual(result.content.includes("applyTo"), false);
+    });
+  });
+
+  suite("Prompt Filtering Test Suite", function () {
+    test("ファイル拡張子に基づいてマッチングできること", function () {
+      const prompts = [
+        { filePath: "java.md", applyToPatterns: ["*.java"], content: "Java prompt" },
+        { filePath: "python.md", applyToPatterns: ["*.py"], content: "Python prompt" },
+      ];
+
+      const result = filterPromptsByTarget(prompts, "src/Main.java");
+      assert.strictEqual(result.length, 1);
+      assert.strictEqual(result[0].filePath, "java.md");
+    });
+
+    test("applyToが未指定の場合は全プロンプトを適用すること", function () {
+      const prompts = [
+        { filePath: "general.md", applyToPatterns: [], content: "General prompt" },
+        { filePath: "java.md", applyToPatterns: ["*.java"], content: "Java prompt" },
+      ];
+
+      const result = filterPromptsByTarget(prompts, "src/Main.java");
+      assert.strictEqual(result.length, 2);
+    });
+
+    test("Globパターンをサポートすること", function () {
+      const prompts = [
+        { filePath: "src_python.md", applyToPatterns: ["src/**/*.py"], content: "Source Python prompt" },
+        { filePath: "test_python.md", applyToPatterns: ["test/**/*.py"], content: "Test Python prompt" },
+      ];
+
+      const result1 = filterPromptsByTarget(prompts, "src/utils/helper.py");
+      assert.strictEqual(result1.length, 1);
+      assert.strictEqual(result1[0].filePath, "src_python.md");
+
+      const result2 = filterPromptsByTarget(prompts, "test/test_utils.py");
+      assert.strictEqual(result2.length, 1);
+      assert.strictEqual(result2[0].filePath, "test_python.md");
+    });
+
+    test("複数パターンをサポートすること", function () {
+      const prompts = [
+        { filePath: "jvm.md", applyToPatterns: ["*.java", "*.kt"], content: "JVM prompt" },
+      ];
+
+      const result1 = filterPromptsByTarget(prompts, "src/Main.java");
+      assert.strictEqual(result1.length, 1);
+
+      const result2 = filterPromptsByTarget(prompts, "src/Main.kt");
+      assert.strictEqual(result2.length, 1);
+
+      const result3 = filterPromptsByTarget(prompts, "src/Main.py");
+      assert.strictEqual(result3.length, 0);
+    });
+
+    test("matchBaseオプションが有効であること", function () {
+      const prompts = [
+        { filePath: "java.md", applyToPatterns: ["*.java"], content: "Java prompt" },
+      ];
+
+      // パス全体でなくファイル名のみでマッチング
+      const result = filterPromptsByTarget(prompts, "/very/long/path/to/Main.java");
+      assert.strictEqual(result.length, 1);
     });
   });
 });

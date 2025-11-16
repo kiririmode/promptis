@@ -3,6 +3,7 @@ import path from "path";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 import * as chatHandlerModule from "../chatHandler";
+import type { PromptMetadata } from "../util";
 
 /**
  * Chatリクエストを作成する関数。
@@ -171,13 +172,16 @@ suite("processSelectedContent Test Suite", function () {
   test("processSelectedContent should return error if no active editor", async function () {
     let mockActiveTextEditor = sinon.stub(vscode.window, "activeTextEditor").value(undefined);
 
-    const promptFiles = ["prompt1", "prompt2"];
+    const promptMetadata: PromptMetadata[] = [
+      { filePath: "prompt1", applyToPatterns: [], content: "Test prompt 1" },
+      { filePath: "prompt2", applyToPatterns: [], content: "Test prompt 2" }
+    ];
     const model = {
       sendRequest: sinon.stub().resolves({ text: ["response"] }),
     } as unknown as vscode.LanguageModelChat;
     const { token, stream } = createPartOfChatRequest();
 
-    const result = await chatHandlerModule.processSelectedContent(promptFiles, model, token, stream);
+    const result = await chatHandlerModule.processSelectedContent(promptMetadata, model, token, stream);
     assert.deepStrictEqual(result, { errorDetails: { message: "No active editor" } });
 
     mockActiveTextEditor.restore();
@@ -192,13 +196,16 @@ suite("processSelectedContent Test Suite", function () {
       },
     });
 
-    const promptFiles = ["prompt1", "prompt2"];
+    const promptMetadata: PromptMetadata[] = [
+      { filePath: "prompt1", applyToPatterns: [], content: "Test prompt 1" },
+      { filePath: "prompt2", applyToPatterns: [], content: "Test prompt 2" }
+    ];
     const model = {
       sendRequest: sinon.stub().resolves({ text: ["response"] }),
     } as unknown as vscode.LanguageModelChat;
     const { token, stream } = createPartOfChatRequest();
 
-    const result = await chatHandlerModule.processSelectedContent(promptFiles, model, token, stream);
+    const result = await chatHandlerModule.processSelectedContent(promptMetadata, model, token, stream);
     assert.deepStrictEqual(result, { errorDetails: { message: "No selection found" } });
 
     mockActiveTextEditor.restore();
@@ -213,13 +220,16 @@ suite("processSelectedContent Test Suite", function () {
       },
     });
 
-    const promptFiles = ["prompt1", "prompt2"];
+    const promptMetadata: PromptMetadata[] = [
+      { filePath: "prompt1", applyToPatterns: [], content: "Test prompt 1" },
+      { filePath: "prompt2", applyToPatterns: [], content: "Test prompt 2" }
+    ];
     const model = {
       sendRequest: sinon.stub().resolves({ text: ["response"] }),
     } as unknown as vscode.LanguageModelChat;
     const { token, stream } = createPartOfChatRequest();
 
-    const result = await chatHandlerModule.processSelectedContent(promptFiles, model, token, stream);
+    const result = await chatHandlerModule.processSelectedContent(promptMetadata, model, token, stream);
     assert.deepStrictEqual(result, { errorDetails: { message: "No content found" } });
 
     mockActiveTextEditor.restore();
@@ -234,13 +244,16 @@ suite("processSelectedContent Test Suite", function () {
       },
     });
 
-    const promptFiles = [path.normalize(`${__dirname}/../../prompts/codestandards/01_readability.md`)];
+    const promptFilePath = path.normalize(`${__dirname}/../../prompts/codestandards/01_readability.md`);
+    const promptMetadata: PromptMetadata[] = [
+      { filePath: promptFilePath, applyToPatterns: [], content: "Test readability prompt" }
+    ];
     const model = {
       sendRequest: sinon.stub().resolves({ text: ["response"] }),
     } as unknown as vscode.LanguageModelChat;
     const { token, stream } = createPartOfChatRequest();
 
-    await chatHandlerModule.processSelectedContent(promptFiles, model, token, stream);
+    await chatHandlerModule.processSelectedContent(promptMetadata, model, token, stream);
   });
 });
 
@@ -424,13 +437,16 @@ suite("processContent Test Suite", function () {
   test("processContent should handle blocked request error", async function () {
     const content = "test content";
     const contentFilePath = "test/path";
-    const promptFiles = [path.normalize(`${__dirname}/../../prompts/codestandards/01_readability.md`)];
+    const promptFilePath = path.normalize(`${__dirname}/../../prompts/codestandards/01_readability.md`);
+    const promptMetadata: PromptMetadata[] = [
+      { filePath: promptFilePath, applyToPatterns: [], content: "Test readability prompt" }
+    ];
     const model = {
       sendRequest: sinon.stub().rejects(vscode.LanguageModelError.Blocked("Blocked")),
     } as unknown as vscode.LanguageModelChat;
     const { token, stream } = createPartOfChatRequest();
 
-    await chatHandlerModule.processContent(content, contentFilePath, promptFiles, model, token, stream);
+    await chatHandlerModule.processContent(content, contentFilePath, promptMetadata, model, token, stream);
 
     sinon.assert.calledWithMatch(stream.markdown as sinon.SinonSpy, /Blocked/);
   });
@@ -438,13 +454,16 @@ suite("processContent Test Suite", function () {
   test("processContent should handle no permissions error", async function () {
     const content = "test content";
     const contentFilePath = "test/path";
-    const promptFiles = [path.normalize(`${__dirname}/../../prompts/codestandards/01_readability.md`)];
+    const promptFilePath = path.normalize(`${__dirname}/../../prompts/codestandards/01_readability.md`);
+    const promptMetadata: PromptMetadata[] = [
+      { filePath: promptFilePath, applyToPatterns: [], content: "Test readability prompt" }
+    ];
     const model = {
       sendRequest: sinon.stub().rejects(vscode.LanguageModelError.NoPermissions("No permissions")),
     } as unknown as vscode.LanguageModelChat;
     const { token, stream } = createPartOfChatRequest();
 
-    await chatHandlerModule.processContent(content, contentFilePath, promptFiles, model, token, stream);
+    await chatHandlerModule.processContent(content, contentFilePath, promptMetadata, model, token, stream);
 
     sinon.assert.calledWithMatch(stream.markdown as sinon.SinonSpy, /No permissions/);
   });
@@ -452,13 +471,16 @@ suite("processContent Test Suite", function () {
   test("processContent should handle not found error", async function () {
     const content = "test content";
     const contentFilePath = "test/path";
-    const promptFiles = [path.normalize(`${__dirname}/../../prompts/codestandards/01_readability.md`)];
+    const promptFilePath = path.normalize(`${__dirname}/../../prompts/codestandards/01_readability.md`);
+    const promptMetadata: PromptMetadata[] = [
+      { filePath: promptFilePath, applyToPatterns: [], content: "Test readability prompt" }
+    ];
     const model = {
       sendRequest: sinon.stub().rejects(vscode.LanguageModelError.NotFound("Not found")),
     } as unknown as vscode.LanguageModelChat;
     const { token, stream } = createPartOfChatRequest();
 
-    await chatHandlerModule.processContent(content, contentFilePath, promptFiles, model, token, stream);
+    await chatHandlerModule.processContent(content, contentFilePath, promptMetadata, model, token, stream);
 
     sinon.assert.calledWithMatch(stream.markdown as sinon.SinonSpy, /Not found/);
   });
@@ -466,13 +488,16 @@ suite("processContent Test Suite", function () {
   test("processContent should handle generic error", async function () {
     const content = "test content";
     const contentFilePath = "test/path";
-    const promptFiles = [path.normalize(`${__dirname}/../../prompts/codestandards/01_readability.md`)];
+    const promptFilePath = path.normalize(`${__dirname}/../../prompts/codestandards/01_readability.md`);
+    const promptMetadata: PromptMetadata[] = [
+      { filePath: promptFilePath, applyToPatterns: [], content: "Test readability prompt" }
+    ];
     const model = {
       sendRequest: sinon.stub().rejects(new Error("Generic error")),
     } as unknown as vscode.LanguageModelChat;
     const { token, stream } = createPartOfChatRequest();
 
-    await chatHandlerModule.processContent(content, contentFilePath, promptFiles, model, token, stream);
+    await chatHandlerModule.processContent(content, contentFilePath, promptMetadata, model, token, stream);
 
     sinon.assert.calledWithMatch(stream.markdown as sinon.SinonSpy, /Generic error/);
   });
@@ -480,13 +505,16 @@ suite("processContent Test Suite", function () {
   test("processContent should process content and write to stream", async function () {
     const content = "test content";
     const contentFilePath = "test/path";
-    const promptFiles = [path.normalize(`${__dirname}/../../prompts/codestandards/01_readability.md`)];
+    const promptFilePath = path.normalize(`${__dirname}/../../prompts/codestandards/01_readability.md`);
+    const promptMetadata: PromptMetadata[] = [
+      { filePath: promptFilePath, applyToPatterns: [], content: "Test readability prompt" }
+    ];
     const model = {
       sendRequest: sinon.stub().resolves({ text: ["response"] }),
     } as unknown as vscode.LanguageModelChat;
     const { token, stream } = createPartOfChatRequest();
 
-    await chatHandlerModule.processContent(content, contentFilePath, promptFiles, model, token, stream);
+    await chatHandlerModule.processContent(content, contentFilePath, promptMetadata, model, token, stream);
 
     sinon.assert.calledWithMatch(stream.markdown as sinon.SinonSpy, "response");
   });
