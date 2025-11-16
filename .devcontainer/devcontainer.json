@@ -27,7 +27,7 @@
             ]
         }
     },
-    "postCreateCommand": "npm install",
+    "postCreateCommand": "npm install && curl -fsSL https://claude.ai/install.sh | bash && curl -LsSf https://astral.sh/uv/install.sh | sh",
     "forwardPorts": [
         3000
     ],
