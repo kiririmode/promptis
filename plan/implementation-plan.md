@@ -43,16 +43,21 @@ applyTo: "src/**/*.py"
 
 ### 現在の処理フロー
 
-1. **プロンプトファイル収集** (`src/chatHandler.ts:53`)
+1. **プロンプトファイル収集** (`src/chatHandler.ts:54-58`)
    - `findPromptFiles()` でディレクトリ内の全`.md`ファイルを取得
 
-2. **ファイル処理** (`src/chatHandler.ts:66-71`)
+2. **出力モード設定** (`src/chatHandler.ts:60-70`)
+   - `OutputStrategyFactory`を使用した出力戦略パターン
+   - chat-only, file-only, bothの3モードをサポート
+
+3. **ファイル処理** (`src/chatHandler.ts:72-79`)
    - 対象ファイルがある場合: `processSourceFiles()` → 各ファイルに対して `processContent()`
    - 選択範囲の場合: `processSelectedContent()` → `processContent()`
 
-3. **プロンプト適用** (`src/chatHandler.ts:165`)
+4. **プロンプト適用** (`src/chatHandler.ts:177`)
    - `processContent()` 内で、**全てのプロンプトファイル**をループで処理
    - 各プロンプトを読み込んでLLMに送信
+   - `OutputStrategy.outputReviewDetails()`で出力
 
 ### 問題点
 
@@ -68,6 +73,10 @@ applyTo: "src/**/*.py"
 - 理由: 広く使われているFront Matter解析ライブラリ、軽量で信頼性が高い
 - インストール: `npm install gray-matter`
 - 型定義: `npm install --save-dev @types/gray-matter`
+
+**既存の依存関係**:
+- `minimatch`: 既にインストール済み（`package.json` L165）
+  - Globパターンマッチングに使用
 
 ### 2. 新規型定義とユーティリティ関数 (`src/util.ts`)
 
@@ -149,9 +158,25 @@ export function filterPromptsByTarget(
 }
 ```
 
-### 3. `chatHandler.ts` の修正
+### 3. OutputStrategyパターンとの統合方針
 
-#### 3.1 プロンプトメタデータの読み込み (L53付近)
+**設計方針**:
+- **Front Matterフィルタリング**: `chatHandler.ts`内で処理
+- **OutputStrategy**: 出力のみを担当（現在の責務を維持）
+
+現在のコードでは`OutputStrategyFactory`が以下の3つの出力モードを提供：
+- `chat-only`: チャットのみに出力
+- `file-only`: ファイルのみに出力
+- `both`: 両方に出力
+
+Front Matter機能の実装では：
+- ✅ `filterPromptsByTarget()`でプロンプトを事前にフィルタリング
+- ✅ `strategy.outputReviewDetails(meta.filePath, contentFilePath, stream)`は変更なし
+- ✅ Strategyパターンの実装クラス（ChatOnlyStrategy, FileOnlyStrategy等）は修正不要
+
+### 4. `chatHandler.ts` の修正
+
+#### 4.1 プロンプトメタデータの読み込み (L54-58付近)
 
 ```typescript
 // 変更前
@@ -168,7 +193,7 @@ if (promptFiles.length === 0) {
 const promptMetadata = promptFiles.map(parsePromptFile);
 ```
 
-#### 3.2 `processSourceFiles()` の修正
+#### 4.2 `processSourceFiles()` の修正（L97-126）
 
 ```typescript
 export async function processSourceFiles(
@@ -203,7 +228,7 @@ export async function processSourceFiles(
 }
 ```
 
-#### 3.3 `processSelectedContent()` の修正
+#### 4.3 `processSelectedContent()` の修正（L128-163）
 
 ```typescript
 export async function processSelectedContent(
@@ -235,7 +260,7 @@ export async function processSelectedContent(
 }
 ```
 
-#### 3.4 `processContent()` の修正
+#### 4.4 `processContent()` の修正（L166-226）
 
 ```typescript
 export async function processContent(
@@ -246,6 +271,10 @@ export async function processContent(
   token: vscode.CancellationToken,
   stream: vscode.ChatResponseStream,
 ): Promise<void> {
+  // OutputStrategyを取得（既存の実装）
+  const outputMode = Config.getOutputMode();
+  const strategy = OutputStrategyFactory.create(outputMode);
+
   for (const meta of promptMetadata) {
     const promptContent = meta.content;  // Front Matter除外済みコンテンツ
     const messages = [
@@ -256,15 +285,8 @@ export async function processContent(
     try {
       stream.markdown(`## Review Details \\n\\n`);
 
-      // Workspaceのroot pathから相対パスで出力
-      const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-      if (workspaceRoot) {
-        stream.markdown(`- Prompt: ${path.relative(workspaceRoot, meta.filePath)}\\n`);
-        stream.markdown(`- Target: ${path.relative(workspaceRoot, contentFilePath)}\\n`);
-      } else {
-        stream.markdown(`- Prompt: ${meta.filePath}\\n`);
-        stream.markdown(`- Target: ${contentFilePath}\\n`);
-      }
+      // OutputStrategyを使用して出力（既存の実装を維持）
+      strategy.outputReviewDetails(meta.filePath, contentFilePath, stream);
       stream.markdown(`----\\n`);
 
       // プロンプトを送信し、GitHub Copilot の AI モデルから応答を受信、出力する
@@ -274,7 +296,12 @@ export async function processContent(
       }
     } catch (error) {
       // エラーハンドリング（既存と同じ）
-      // ...
+      if (error instanceof vscode.LanguageModelError) {
+        console.error(error.message, error.code, error.cause);
+        stream.markdown(`Error occurred: ${error.message}\n`);
+      } else {
+        throw error;
+      }
     } finally {
       stream.markdown("\\n\\n");
       if (stream instanceof FileChatResponseStreamWrapper) {
@@ -285,7 +312,7 @@ export async function processContent(
 }
 ```
 
-#### 3.5 `chatHandler` メイン関数の修正
+#### 4.5 `chatHandler` メイン関数の修正（L40-79）
 
 ```typescript
 chatHandler: vscode.ChatRequestHandler = async (request, context, stream, token) => {
@@ -423,6 +450,7 @@ suite("Chat Handler with Front Matter Test Suite", () => {
 - [ ] `gray-matter` のインストール
 - [ ] `@types/gray-matter` のインストール
 - [ ] `package.json` の更新
+- ✅ `minimatch` は既にインストール済み
 
 ### Phase 2: ユーティリティ関数実装（30分）
 - [ ] `PromptMetadata` 型定義の追加
@@ -433,9 +461,14 @@ suite("Chat Handler with Front Matter Test Suite", () => {
 
 ### Phase 3: chatHandler統合（45分）
 - [ ] `processContent()` シグネチャ変更
+  - ⚠️ OutputStrategyパターンを維持すること
+  - `strategy.outputReviewDetails(meta.filePath, ...)`を使用
 - [ ] `processSourceFiles()` の修正
+  - フィルタリング処理を追加
 - [ ] `processSelectedContent()` の修正
+  - アクティブファイルパスでのフィルタリング処理を追加
 - [ ] `chatHandler` メイン関数の修正
+  - プロンプトメタデータの解析を追加
 - [ ] エラーハンドリングの追加
 
 ### Phase 4: テスト追加（60分）
@@ -517,21 +550,28 @@ prompts/codestandards/
 
 ## 実装上の注意点
 
-1. **パフォーマンス**
+1. **OutputStrategyパターンとの統合**
+   - OutputStrategyの責務は変更しない（出力のみを担当）
+   - Front Matterフィルタリングは`chatHandler.ts`内で処理
+   - `strategy.outputReviewDetails()`のシグネチャは変更しない
+   - 既存のfile-only, chat-only, bothモードの動作を維持
+
+2. **パフォーマンス**
    - Front Matter解析は最初の1回のみ（プロンプトファイル読み込み時）
    - フィルタリングはminimatchで高速
 
-2. **エラーメッセージ**
+3. **エラーメッセージ**
    - ユーザーフレンドリーなメッセージを心がける
    - マッチしないファイルは警告を出すが処理は継続
 
-3. **ログ出力**
+4. **ログ出力**
    - 適用されるプロンプト数を表示
    - デバッグ時に役立つ情報を出力
 
-4. **テスト**
+5. **テスト**
    - 後方互換性テストは必須
    - エッジケースも網羅的にテスト
+   - OutputStrategy各モードでの動作確認
 
 ## リリース後の対応
 
