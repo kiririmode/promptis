@@ -1,7 +1,17 @@
 import fs from "fs";
+import matter from "gray-matter";
 import { minimatch } from "minimatch";
 import path from "path";
 import * as vscode from "vscode";
+
+/**
+ * プロンプトファイルのメタデータ
+ */
+export interface PromptMetadata {
+  filePath: string;           // プロンプトファイルのパス
+  applyToPatterns: string[];  // Front Matterで指定されたパターン（空配列=全適用）
+  content: string;            // Front Matter除外後のコンテンツ
+}
 
 /**
  * 指定したディレクトリ内のファイルを再帰的に取得する関数
@@ -55,6 +65,63 @@ export function findPromptFiles(directoryPath: string, ignorePatterns: string[])
     .filter((p) => ignorePatterns.every((pattern) => !minimatch(p, pattern)));
 
   return promptFiles;
+}
+
+/**
+ * プロンプトファイルのFront Matterを解析し、メタデータを取得
+ *
+ * @param filePath - プロンプトファイルのパス
+ * @returns PromptMetadata
+ *
+ * @example
+ * const meta = parsePromptFile('/path/to/prompt.md');
+ * // meta.applyToPatterns が空の場合は全ファイル対象（後方互換性）
+ */
+export function parsePromptFile(filePath: string): PromptMetadata {
+  const fileContent = fs.readFileSync(filePath, "utf8");
+  const parsed = matter(fileContent);
+
+  let applyToPatterns: string[] = [];
+  if (parsed.data.applyTo) {
+    // 文字列または配列に対応
+    applyToPatterns = Array.isArray(parsed.data.applyTo)
+      ? parsed.data.applyTo
+      : [parsed.data.applyTo];
+  }
+
+  return {
+    filePath,
+    applyToPatterns,  // 空配列の場合は全ファイル対象（後方互換性）
+    content: parsed.content
+  };
+}
+
+/**
+ * 対象ファイルパスに適用すべきプロンプトメタデータをフィルタリング
+ *
+ * @param promptMetadata - プロンプトメタデータの配列
+ * @param targetFilePath - 対象ファイルのパス
+ * @returns フィルタリングされたプロンプトメタデータの配列
+ *
+ * @example
+ * const applicable = filterPromptsByTarget(allPrompts, 'src/Main.java');
+ * // *.java にマッチするプロンプトのみ返される
+ */
+export function filterPromptsByTarget(
+  promptMetadata: PromptMetadata[],
+  targetFilePath: string
+): PromptMetadata[] {
+  return promptMetadata.filter(meta => {
+    // applyToPatternsが空の場合は全ファイル対象（後方互換性）
+    if (meta.applyToPatterns.length === 0) {
+      return true;
+    }
+
+    // いずれかのパターンにマッチすれば適用
+    return meta.applyToPatterns.some(pattern =>
+      minimatch(targetFilePath, pattern, { matchBase: true })
+    );
+  });
 }
 
 /**

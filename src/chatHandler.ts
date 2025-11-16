@@ -5,7 +5,7 @@ import { postUsage } from "./api";
 import { FileChatResponseStreamWrapper } from "./chatutil";
 import { Config } from "./config";
 import { OutputStrategyFactory } from "./output";
-import { extractTargetFiles, findPromptFiles, timestampAsString } from "./util";
+import { extractTargetFiles, filterPromptsByTarget, findPromptFiles, parsePromptFile, timestampAsString, type PromptMetadata } from "./util";
 
 type CommandPromptPathMap = Map<string, () => string | undefined>;
 const commandPromptDirectoryMap: CommandPromptPathMap = new Map([
@@ -57,6 +57,9 @@ export const chatHandler: vscode.ChatRequestHandler = async (request, context, s
     return createErrorResponse(`No prompt files found in ${promptDir}`, stream);
   }
 
+  // プロンプトファイルのメタデータを解析
+  const promptMetadata = promptFiles.map(parsePromptFile);
+
   const outputDirPath = Config.getChatOutputDirPath();
   const outputMode = Config.getOutputMode();
 
@@ -72,10 +75,10 @@ export const chatHandler: vscode.ChatRequestHandler = async (request, context, s
   const targetFiles = await extractTargetFiles(request, stream);
   if (targetFiles.length > 0) {
     // ファイル指定があれば、当該ファイルをレビューする
-    await processSourceFiles(targetFiles, promptFiles, request.model, token, stream);
+    await processSourceFiles(targetFiles, promptMetadata, request.model, token, stream);
   } else {
     // ファイル指定がなければ、エディタで選択されている内容をレビューする
-    await processSelectedContent(promptFiles, request.model, token, stream);
+    await processSelectedContent(promptMetadata, request.model, token, stream);
   }
 };
 
@@ -88,7 +91,7 @@ export function getPromptDirectory(command: string): string | undefined {
  * 指定されたソースファイルを処理する非同期関数。
  *
  * @param {string[]} sourcePaths - 処理するソースファイルのパスの配列。
- * @param {string[]} promptPaths - プロンプトファイルのパスの配列。
+ * @param {PromptMetadata[]} promptMetadata - プロンプトメタデータの配列。
  * @param {vscode.LanguageModelChat} model - 使用するChat Model
  * @param {vscode.CancellationToken} token - キャンセルトークン。
  * @param {vscode.ChatResponseStream} stream - チャット用の Response Stream
@@ -96,7 +99,7 @@ export function getPromptDirectory(command: string): string | undefined {
  */
 export async function processSourceFiles(
   sourcePaths: string[],
-  promptPaths: string[],
+  promptMetadata: PromptMetadata[],
   model: vscode.LanguageModelChat,
   token: vscode.CancellationToken,
   stream: vscode.ChatResponseStream,
@@ -111,7 +114,18 @@ export async function processSourceFiles(
     strategy.outputProgress(counter, sourceNum, stream);
 
     const content = fs.readFileSync(sourcePath, { encoding: "utf8" });
-    await processContent(content, sourcePath, promptPaths, model, token, stream);
+
+    // 対象ファイルに適用可能なプロンプトのみをフィルタリング
+    const applicablePrompts = filterPromptsByTarget(promptMetadata, sourcePath);
+
+    if (applicablePrompts.length === 0) {
+      stream.markdown(`⚠️ No prompts matched for file: ${path.basename(sourcePath)}\n`);
+      counter++;
+      continue;
+    }
+
+    stream.markdown(`Applying ${applicablePrompts.length} prompt(s) to ${path.basename(sourcePath)}\n`);
+    await processContent(content, sourcePath, applicablePrompts, model, token, stream);
     counter++;
   }
 }
@@ -119,14 +133,14 @@ export async function processSourceFiles(
 /**
  * エディタ上で選択した内容をプロンプトで処理する
  *
- * @param {string[]} promptFiles - プロンプトファイルのパスの配列。
+ * @param {PromptMetadata[]} promptMetadata - プロンプトメタデータの配列。
  * @param {vscode.LanguageModelChat} model - 使用するChat Model
  * @param {vscode.CancellationToken} token - キャンセルトークン。
  * @param {vscode.ChatResponseStream} stream - チャット用の Response Stream
  * @returns {Promise<void | vscode.ChatResult>} 処理が完了したことを示すPromise、またはエラーが発生した場合はエラー情報を含む ChatResult
  */
 export async function processSelectedContent(
-  promptFiles: string[],
+  promptMetadata: PromptMetadata[],
   model: vscode.LanguageModelChat,
   token: vscode.CancellationToken,
   stream: vscode.ChatResponseStream,
@@ -149,7 +163,16 @@ export async function processSelectedContent(
     return createErrorResponse("No content found", stream);
   }
 
-  await processContent(content, contentFilePath, promptFiles, model, token, stream);
+  // アクティブエディタのファイルパスを取得してフィルタリング
+  const applicablePrompts = filterPromptsByTarget(promptMetadata, contentFilePath);
+
+  if (applicablePrompts.length === 0) {
+    stream.markdown(`⚠️ No prompts matched for file: ${path.basename(contentFilePath)}\n`);
+    return;
+  }
+
+  stream.markdown(`Applying ${applicablePrompts.length} prompt(s) to selection\n`);
+  await processContent(content, contentFilePath, applicablePrompts, model, token, stream);
 }
 
 /**
@@ -157,7 +180,7 @@ export async function processSelectedContent(
  *
  * @param {string} content - 処理対象の文字列
  * @param {string} contentFilePath - 処理対象となるファイルパス
- * @param {string[]} promptFiles - プロンプトファイルのパスの配列。
+ * @param {PromptMetadata[]} promptMetadata - プロンプトメタデータの配列。
  * @param {vscode.LanguageModelChat} model - 使用する Chat Model
  * @param {vscode.CancellationToken} token - キャンセルトークン。
  * @param {vscode.ChatResponseStream} stream -
@@ -166,7 +189,7 @@ export async function processSelectedContent(
 export async function processContent(
   content: string,
   contentFilePath: string,
-  promptFiles: string[],
+  promptMetadata: PromptMetadata[],
   model: vscode.LanguageModelChat,
   token: vscode.CancellationToken,
   stream: vscode.ChatResponseStream,
@@ -174,15 +197,15 @@ export async function processContent(
   const outputMode = Config.getOutputMode();
   const strategy = OutputStrategyFactory.create(outputMode);
 
-  for (const promptFile of promptFiles) {
-    const promptContent = fs.readFileSync(promptFile, "utf8");
+  for (const meta of promptMetadata) {
+    const promptContent = meta.content;  // Front Matter除外済みコンテンツ
     const messages = [
       vscode.LanguageModelChatMessage.User(promptContent),
       vscode.LanguageModelChatMessage.User(content),
     ];
 
     try {
-      strategy.outputReviewDetails(promptFile, contentFilePath, stream);
+      strategy.outputReviewDetails(meta.filePath, contentFilePath, stream);
 
       // プロンプトを送信し、GitHub Copilot の AI モデルから応答を受信、出力する
       const res = await model.sendRequest(messages, {}, token);
