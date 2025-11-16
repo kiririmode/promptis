@@ -81,6 +81,64 @@ Promptisではさらに、次のチャット変数を利用できます。
 | `#dir:[Directory]` | プロンプト中に`#dir`を含めることで、プロンプトを適用するディレクトリを指定できる。指定したディレクトリ配下の全ファイルに対してプロンプトが実行される。また、`#dir:path/to/dir`の形式で直接ディレクトリを指定することも可能。 | `@promptis /codereviewCodeStandards #dir` |
 | `#filter:[GlobPattern]` | プロンプト中に`#filter:[GlobPattern]`を含めることで、`#dir`指定によって抽出されたファイルのうち、GlobPatternに合致するもののみを適用対象として絞り込める。指定できるパターンについては[GlobPattern](https://code.visualstudio.com/api/references/vscode-api#GlobPattern)を参照。 | `@promptis /codereviewCodeStandards #dir #filter:**/*.{ts,js}`
 
+### プロンプトファイルのFront Matter
+
+プロンプトファイル（`.md`）にFront Matter形式で`applyTo`フィールドを指定することで、特定のファイル拡張子やパターンにのみプロンプトを適用することができます。これにより、ファイルタイプごとに異なるレビュー観点を持つことが可能になります。
+
+#### 基本形式
+
+```markdown
+---
+applyTo: "*.java"
+---
+あなたは極めて優秀なJavaプログラマーで、Javaコーディング規約に対する責任を持っています。
+...
+```
+
+このプロンプトは`.java`ファイルに対してのみ適用されます。
+
+#### 複数拡張子の指定
+
+配列形式で複数の拡張子を指定できます：
+
+```markdown
+---
+applyTo: ["*.java", "*.kt"]
+---
+```
+
+#### Globパターンの使用
+
+より柔軟なパターンマッチングも可能です：
+
+```markdown
+---
+applyTo: "src/**/*.py"
+---
+```
+
+#### 後方互換性
+
+`applyTo`フィールドが未指定の場合、そのプロンプトは全てのファイルに適用されます（既存の動作と同じ）。
+
+#### 使用例
+
+例えば、以下のようなプロンプトファイル構成の場合：
+
+```
+prompts/codestandards/
+├── 01_java_readability.md       (applyTo: "*.java")
+├── 02_java_naming.md            (applyTo: "*.java")
+├── 03_python_pep8.md            (applyTo: "*.py")
+├── 04_typescript_style.md       (applyTo: ["*.ts", "*.tsx"])
+├── 05_general_security.md       (applyTo未指定 = 全ファイル対象)
+└── 06_sql_injection.md          (applyTo: "*.sql")
+```
+
+- `Main.java`をレビューする場合 → `01_java_readability.md`、`02_java_naming.md`、`05_general_security.md`が適用される
+- `app.py`をレビューする場合 → `03_python_pep8.md`、`05_general_security.md`が適用される
+- `component.tsx`をレビューする場合 → `04_typescript_style.md`、`05_general_security.md`が適用される
+
 ## Requirements
 
 - [VS Code](https://code.visualstudio.com/) が[version.1.91.0](https://code.visualstudio.com/updates/v1_91)以降
