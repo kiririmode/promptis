@@ -10,7 +10,7 @@ suite("Config Test Suite", () => {
   setup(function () {
     // 各テストケースの前に実行されるセットアップ
     mockGetConfiguration = sinon.stub(vscode.workspace, "getConfiguration").returns({
-      get: sinon.stub().callsFake((section: string, defaultValue: unknown) => defaultValue),
+      get: sinon.stub().callsFake((_section: string, defaultValue: unknown) => defaultValue),
       has: sinon.stub().returns(true),
       inspect: sinon.stub().returns(undefined),
       update: sinon.stub().returns(Promise.resolve()),
@@ -91,6 +91,27 @@ suite("Config Test Suite", () => {
       getStub.withArgs("telemetry.enable").returns(false);
       const result = Config.getTelemetryEnabled();
       assert.strictEqual(result, false);
+    });
+
+    test("デフォルトの出力モードとして'chat-only'を返すべき", function () {
+      const getStub = mockGetConfiguration().get as sinon.SinonStub;
+      getStub.withArgs("promptis.output.mode", "chat-only").returns("chat-only");
+      const result = Config.getOutputMode();
+      assert.strictEqual(result, "chat-only");
+    });
+
+    test("設定で'file-only'が指定された場合、'file-only'を返すべき", function () {
+      const getStub = mockGetConfiguration().get as sinon.SinonStub;
+      getStub.withArgs("promptis.output.mode", "chat-only").returns("file-only");
+      const result = Config.getOutputMode();
+      assert.strictEqual(result, "file-only");
+    });
+
+    test("設定値が未設定の場合、デフォルトの'chat-only'を返すべき", function () {
+      const getStub = mockGetConfiguration().get as sinon.SinonStub;
+      getStub.withArgs("promptis.output.mode", "chat-only").returns("chat-only");
+      const result = Config.getOutputMode();
+      assert.strictEqual(result, "chat-only");
     });
   });
 });

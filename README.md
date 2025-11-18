@@ -23,6 +23,7 @@ Promptisは、これらの問題を解決するために、GitHub Copilot Chat�
 - **プロンプト入力の手間を軽減**: プロンプトの自動実行により、手動での入力作業を減らし、開発に集中できる
 - **一貫性のあるコードレビュー**: プロンプトの統一により、コードの品質と一貫性を向上
 - **迅速なフィードバック**: プロンプトの自動実行により、コードレビューやフィードバックの速度が向上し、開発サイクルが短縮される
+- **柔軟な出力制御**: 出力モード設定により、ChatWindowの負荷を軽減しながら大量のファイルレビューを実行可能
 
 ## How to Install
 
@@ -98,7 +99,8 @@ Promptisではさらに、次のチャット変数を利用できます。
 | `reverseEngineering.promptsPath`  | string   |  | リバースエンジニアリング用プロンプト格納ディレクトリの絶対パス |
 | `drawDiagrams.promptsPath`        | string   |  | 図式生成用のプロンプト用ディレクトリの絶対パス |
 | `prompt.excludeFilePatterns`      | array of string | | プロンプト格納ディレクトリ配下のプロンプトファイルのうち、実行しないファイル名のパターン（ex., `**/dir/*.md`）。記述できるパターンは[minimatch-cheat-sheet](https://github.com/motemen/minimatch-cheat-sheet)を参照。 |
-| `chat.outputPath`                 | string   |  | チャット内容のバックアップ出力先ディレクトリの絶対パス |
+| `promptis.output.mode`            | string   | `chat-only` | 出力モード。`chat-only`はChatWindowに結果を表示、`file-only`はファイルのみに出力しChatWindowの負荷を軽減 |
+| `chat.outputPath`                 | string   |  | チャット内容のバックアップ出力先ディレクトリの絶対パス（`file-only`モード時は必須） |
 | `telemetry.enable`                | boolean  | true | 利用状況を示すテレメトリ情報の送信可否 |
 
 ## Telemetry

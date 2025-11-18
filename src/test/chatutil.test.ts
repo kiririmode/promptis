@@ -1,4 +1,5 @@
 import * as assert from "assert";
+import * as fs from "fs";
 import * as path from "path";
 import * as sinon from "sinon";
 import * as vscode from "vscode"; // Add this line to import the vscode namespace
@@ -131,5 +132,86 @@ suite("FileChatResponseStream Test Suite", function () {
 
     sinon.assert.calledOnce(mockOriginalStream.push as sinon.SinonSpy);
     sinon.assert.calledWith(mockOriginalStream.push as sinon.SinonSpy, part);
+  });
+
+  test("clearContentメソッドがcontent配列をクリアすること", function () {
+    const filePath = "test/path";
+    const stream = new FileChatResponseStreamWrapper(mockOriginalStream, filePath);
+
+    // コンテンツを追加
+    stream.markdown("test content 1");
+    stream.markdown("test content 2");
+    assert.strictEqual(stream["content"].length, 2);
+
+    // コンテンツをクリア
+    stream.clearContent();
+    assert.strictEqual(stream["content"].length, 0);
+    assert.deepStrictEqual(stream["content"], []);
+  });
+
+  test("disposeメソッドがcontent配列をクリアすること", function () {
+    const filePath = "test/path";
+    const stream = new FileChatResponseStreamWrapper(mockOriginalStream, filePath);
+
+    // コンテンツを追加
+    stream.markdown("test content 1");
+    stream.markdown("test content 2");
+    assert.strictEqual(stream["content"].length, 2);
+
+    // リソースを解放
+    stream.dispose();
+    assert.strictEqual(stream["content"].length, 0);
+    assert.deepStrictEqual(stream["content"], []);
+  });
+
+  test("writeToFileメソッドが書き込み後にコンテンツをクリアすること", function () {
+    const filePath = path.normalize(`${__dirname}/../../out/test_clear_content`);
+    const stream = new FileChatResponseStreamWrapper(mockOriginalStream, filePath);
+
+    // コンテンツを追加
+    stream.markdown("test content 1");
+    stream.markdown("test content 2");
+    assert.strictEqual(stream["content"].length, 2);
+
+    // ファイルに書き込み
+    stream.writeToFile();
+
+    // 書き込み後にコンテンツがクリアされていること
+    assert.strictEqual(stream["content"].length, 0);
+    assert.deepStrictEqual(stream["content"], []);
+  });
+
+  test("writeToFileメソッドを複数回呼び出すと全ての内容がファイルに追記されること", function () {
+    const filePath = path.normalize(`${__dirname}/../../out/test_append_mode`);
+    const stream = new FileChatResponseStreamWrapper(mockOriginalStream, filePath);
+
+    // テスト前にファイルが存在する場合は削除
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    // 1回目の書き込み
+    stream.markdown("1つ目の内容\n");
+    stream.writeToFile();
+    assert.strictEqual(stream["content"].length, 0); // メモリはクリアされている
+
+    // 2回目の書き込み
+    stream.markdown("2つ目の内容\n");
+    stream.writeToFile();
+    assert.strictEqual(stream["content"].length, 0); // メモリはクリアされている
+
+    // 3回目の書き込み
+    stream.markdown("3つ目の内容\n");
+    stream.writeToFile();
+    assert.strictEqual(stream["content"].length, 0); // メモリはクリアされている
+
+    // ファイルには全ての内容が追記されていることを確認
+    const fileContent = fs.readFileSync(filePath, "utf8");
+    assert.strictEqual(fileContent, "1つ目の内容\n2つ目の内容\n3つ目の内容\n");
+
+    // テスト後のクリーンアップ
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
   });
 });
