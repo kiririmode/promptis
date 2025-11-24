@@ -6,9 +6,11 @@
             "installMaven": true
         },
         "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
-            "moby": false
+
         },
-        "ghcr.io/devcontainers-extra/features/direnv:1": {}
+        "ghcr.io/devcontainers-extra/features/direnv:1": {
+            "moby": true
+        }
     },
     "build": {
         "dockerfile": "Dockerfile",
@@ -38,7 +40,4 @@
         "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached"
     ],
     "remoteUser": "node",
-    "containerEnv": {
-        "DOCKER_API_VERSION": "1.41"
-    }
 }

@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/vscode/devcontainers/javascript-node:24
+FROM mcr.microsoft.com/vscode/devcontainers/javascript-node:24-bookworm
 
 RUN apt-get update \
     && export DEBIAN_FRONTEND=noninteractive \
