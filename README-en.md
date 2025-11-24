@@ -77,6 +77,64 @@ In Promptis, you can also use the following chat variables:
 | `#dir:[Directory]` | By including `#dir` in the prompt, you can specify the directory to which the prompt will be applied. The prompt will be executed on all files under the specified directory. You can also directly specify the directory in the format `#dir:path/to/dir`. | `@promptis /codereviewCodeStandards #dir` |
 | `#filter:[GlobPattern]` | By including `#filter:[GlobPattern]` in the prompt, you can narrow down the files extracted by the `#dir` specification to only those that match the GlobPattern. For the patterns that can be specified, refer to [GlobPattern](https://code.visualstudio.com/api/references/vscode-api#GlobPattern). | `@promptis /codereviewCodeStandards #dir #filter:**/*.{ts,js}`
 
+### Prompt File Front Matter
+
+You can specify the `applyTo` field in Front Matter format in prompt files (`.md`) to apply prompts only to specific file extensions or patterns. Paths are specified relative to the workspace root. This allows you to have different review perspectives for each file type.
+
+#### Basic Format
+
+```markdown
+---
+applyTo: "*.java"
+---
+You are an excellent Java programmer with responsibility for Java coding standards.
+...
+```
+
+This prompt will only be applied to `.java` files.
+
+#### Multiple Extensions
+
+You can specify multiple extensions in array format:
+
+```markdown
+---
+applyTo: ["*.java", "*.kt"]
+---
+```
+
+#### Using Glob Patterns
+
+More flexible pattern matching is also possible:
+
+```markdown
+---
+applyTo: "src/**/*.py"
+---
+```
+
+#### Backward Compatibility
+
+If the `applyTo` field is not specified, the prompt will be applied to all files (same as the existing behavior).
+
+#### Usage Example
+
+For example, with the following prompt file structure:
+
+```
+prompts/codestandards/
+├── 01_java_readability.md       (applyTo: "*.java")
+├── 02_java_naming.md            (applyTo: "*.java")
+├── 03_python_pep8.md            (applyTo: "*.py")
+├── 04_typescript_style.md       (applyTo: ["*.ts", "*.tsx"])
+├── 05_general_security.md       (applyTo not specified = applies to all files)
+└── 06_sql_injection.md          (applyTo: "*.sql")
+```
+
+- When reviewing `Main.java` → `01_java_readability.md`, `02_java_naming.md`, and `05_general_security.md` will be applied
+- When reviewing `app.py` → `03_python_pep8.md` and `05_general_security.md` will be applied
+- When reviewing `component.tsx` → `04_typescript_style.md` and `05_general_security.md` will be applied
+
 ## Requirements
 
 - [VS Code](https://code.visualstudio.com/) [version.1.91.0](https://code.visualstudio.com/updates/v1_91) or later
