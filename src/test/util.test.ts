@@ -462,13 +462,16 @@ suite("Util Test Suite", function () {
   });
 
   suite("Prompt Filtering Test Suite", function () {
+    // テスト用のワークスペースルート
+    const workspaceRoot = "/workspace";
+
     test("ファイル拡張子に基づいてマッチングできること", function () {
       const prompts = [
         { filePath: "java.md", applyToPatterns: ["*.java"], content: "Java prompt" },
         { filePath: "python.md", applyToPatterns: ["*.py"], content: "Python prompt" },
       ];
 
-      const result = filterPromptsByTarget(prompts, "src/Main.java");
+      const result = filterPromptsByTarget(prompts, "/workspace/src/Main.java", workspaceRoot);
       assert.strictEqual(result.length, 1);
       assert.strictEqual(result[0].filePath, "java.md");
     });
@@ -479,7 +482,7 @@ suite("Util Test Suite", function () {
         { filePath: "java.md", applyToPatterns: ["*.java"], content: "Java prompt" },
       ];
 
-      const result = filterPromptsByTarget(prompts, "src/Main.java");
+      const result = filterPromptsByTarget(prompts, "/workspace/src/Main.java", workspaceRoot);
       assert.strictEqual(result.length, 2);
     });
 
@@ -489,11 +492,11 @@ suite("Util Test Suite", function () {
         { filePath: "test_python.md", applyToPatterns: ["test/**/*.py"], content: "Test Python prompt" },
       ];
 
-      const result1 = filterPromptsByTarget(prompts, "src/utils/helper.py");
+      const result1 = filterPromptsByTarget(prompts, "/workspace/src/utils/helper.py", workspaceRoot);
       assert.strictEqual(result1.length, 1);
       assert.strictEqual(result1[0].filePath, "src_python.md");
 
-      const result2 = filterPromptsByTarget(prompts, "test/test_utils.py");
+      const result2 = filterPromptsByTarget(prompts, "/workspace/test/test_utils.py", workspaceRoot);
       assert.strictEqual(result2.length, 1);
       assert.strictEqual(result2[0].filePath, "test_python.md");
     });
@@ -503,13 +506,13 @@ suite("Util Test Suite", function () {
         { filePath: "jvm.md", applyToPatterns: ["*.java", "*.kt"], content: "JVM prompt" },
       ];
 
-      const result1 = filterPromptsByTarget(prompts, "src/Main.java");
+      const result1 = filterPromptsByTarget(prompts, "/workspace/src/Main.java", workspaceRoot);
       assert.strictEqual(result1.length, 1);
 
-      const result2 = filterPromptsByTarget(prompts, "src/Main.kt");
+      const result2 = filterPromptsByTarget(prompts, "/workspace/src/Main.kt", workspaceRoot);
       assert.strictEqual(result2.length, 1);
 
-      const result3 = filterPromptsByTarget(prompts, "src/Main.py");
+      const result3 = filterPromptsByTarget(prompts, "/workspace/src/Main.py", workspaceRoot);
       assert.strictEqual(result3.length, 0);
     });
 
@@ -519,8 +522,22 @@ suite("Util Test Suite", function () {
       ];
 
       // パス全体でなくファイル名のみでマッチング
-      const result = filterPromptsByTarget(prompts, "/very/long/path/to/Main.java");
+      const result = filterPromptsByTarget(prompts, "/workspace/very/long/path/to/Main.java", workspaceRoot);
       assert.strictEqual(result.length, 1);
+    });
+
+    test("ワークスペースルートからの相対パスでマッチングされること", function () {
+      const prompts = [
+        { filePath: "src_ts.md", applyToPatterns: ["src/*.ts"], content: "Src TypeScript prompt" },
+      ];
+
+      // src/*.ts は src直下の.tsファイルにのみマッチ
+      const result1 = filterPromptsByTarget(prompts, "/workspace/src/config.ts", workspaceRoot);
+      assert.strictEqual(result1.length, 1);
+
+      // src/subdir/file.ts にはマッチしない
+      const result2 = filterPromptsByTarget(prompts, "/workspace/src/subdir/file.ts", workspaceRoot);
+      assert.strictEqual(result2.length, 0);
     });
   });
 });

@@ -79,7 +79,7 @@ In Promptis, you can also use the following chat variables:
 
 ### Prompt File Front Matter
 
-You can specify the `applyTo` field in Front Matter format in prompt files (`.md`) to apply prompts only to specific file extensions or patterns. This allows you to have different review perspectives for each file type.
+You can specify the `applyTo` field in Front Matter format in prompt files (`.md`) to apply prompts only to specific file extensions or patterns. Paths are specified relative to the workspace root. This allows you to have different review perspectives for each file type.
 
 #### Basic Format
 

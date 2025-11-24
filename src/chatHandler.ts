@@ -109,6 +109,9 @@ export async function processSourceFiles(
   const outputMode = Config.getOutputMode();
   const strategy = OutputStrategyFactory.create(outputMode);
 
+  // ワークスペースルートを取得
+  const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "";
+
   // ソースファイルを軸にして、プロンプトを適用していく
   for (const sourcePath of sourcePaths) {
     strategy.outputProgress(counter, sourceNum, stream);
@@ -116,7 +119,7 @@ export async function processSourceFiles(
     const content = fs.readFileSync(sourcePath, { encoding: "utf8" });
 
     // 対象ファイルに適用可能なプロンプトのみをフィルタリング
-    const applicablePrompts = filterPromptsByTarget(promptMetadata, sourcePath);
+    const applicablePrompts = filterPromptsByTarget(promptMetadata, sourcePath, workspaceRoot);
 
     if (applicablePrompts.length === 0) {
       stream.markdown(`⚠️ No prompts matched for file: ${path.basename(sourcePath)}\n`);
@@ -163,8 +166,11 @@ export async function processSelectedContent(
     return createErrorResponse("No content found", stream);
   }
 
+  // ワークスペースルートを取得
+  const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "";
+
   // アクティブエディタのファイルパスを取得してフィルタリング
-  const applicablePrompts = filterPromptsByTarget(promptMetadata, contentFilePath);
+  const applicablePrompts = filterPromptsByTarget(promptMetadata, contentFilePath, workspaceRoot);
 
   if (applicablePrompts.length === 0) {
     stream.markdown(`⚠️ No prompts matched for file: ${path.basename(contentFilePath)}\n`);

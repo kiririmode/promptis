@@ -100,17 +100,22 @@ export function parsePromptFile(filePath: string): PromptMetadata {
  * 対象ファイルパスに適用すべきプロンプトメタデータをフィルタリング
  *
  * @param promptMetadata - プロンプトメタデータの配列
- * @param targetFilePath - 対象ファイルのパス
+ * @param targetFilePath - 対象ファイルの絶対パス
+ * @param workspaceRoot - ワークスペースルートの絶対パス
  * @returns フィルタリングされたプロンプトメタデータの配列
  *
  * @example
- * const applicable = filterPromptsByTarget(allPrompts, 'src/Main.java');
+ * const applicable = filterPromptsByTarget(allPrompts, '/workspace/src/Main.java', '/workspace');
  * // *.java にマッチするプロンプトのみ返される
  */
 export function filterPromptsByTarget(
   promptMetadata: PromptMetadata[],
-  targetFilePath: string
+  targetFilePath: string,
+  workspaceRoot: string
 ): PromptMetadata[] {
+  // 絶対パスをワークスペースルートからの相対パスに変換
+  const relativePath = path.relative(workspaceRoot, targetFilePath);
+
   return promptMetadata.filter(meta => {
     // applyToPatternsが空の場合は全ファイル対象（後方互換性）
     if (meta.applyToPatterns.length === 0) {
@@ -119,7 +124,7 @@ export function filterPromptsByTarget(
 
     // いずれかのパターンにマッチすれば適用
     return meta.applyToPatterns.some(pattern =>
-      minimatch(targetFilePath, pattern, { matchBase: true })
+      minimatch(relativePath, pattern, { matchBase: true })
     );
   });
 }
