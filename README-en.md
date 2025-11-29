@@ -113,6 +113,73 @@ applyTo: "src/**/*.py"
 ---
 ```
 
+#### Using Exclusion Patterns
+
+You can exclude specific files by using patterns starting with `!`. Patterns are evaluated in order, with later patterns taking precedence.
+
+##### Basic Exclusion
+
+```markdown
+---
+applyTo:
+  - "**/*.tsx"           # Include all .tsx files
+  - "!**/*.stories.tsx"  # Exclude Storybook files
+---
+```
+
+This prompt applies to `.tsx` files but excludes `.stories.tsx` files.
+
+##### Re-including Patterns
+
+You can also include specific files from excluded patterns:
+
+```markdown
+---
+applyTo:
+  - "**/*.ts"            # Include all .ts files
+  - "!**/*.spec.ts"      # Exclude test files
+  - "src/special.spec.ts" # But include this specific file
+---
+```
+
+##### Complex Example
+
+```markdown
+---
+applyTo:
+  - "src/**/*.ts"           # All .ts files in src directory
+  - "!src/test/**/*.ts"     # Exclude test directory
+  - "!src/**/*.generated.ts" # Exclude generated files
+  - "src/test/critical.ts"   # Include specific test file
+---
+```
+
+##### Pattern Evaluation Order
+
+Patterns are evaluated in array order, with later patterns taking precedence:
+
+```markdown
+---
+# Pattern 1: Normal exclusion
+applyTo:
+  - "*.ts"        # Include all .ts files
+  - "!*.spec.ts"  # Exclude test files
+# → *.spec.ts files are excluded
+---
+```
+
+```markdown
+---
+# Pattern 2: Reversed order (later pattern wins)
+applyTo:
+  - "!*.spec.ts"  # Exclude test files (but overridden by next pattern)
+  - "*.ts"        # Include all .ts files
+# → *.spec.ts files are included (later pattern takes precedence)
+---
+```
+
+**Note:** If you only specify exclusion patterns (`!`), nothing will match by default. Always include at least one include pattern.
+
 #### Backward Compatibility
 
 If the `applyTo` field is not specified, the prompt will be applied to all files (same as the existing behavior).

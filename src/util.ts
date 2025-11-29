@@ -129,21 +129,73 @@ export function filterPromptsByTarget(
       return true;
     }
 
-    // 各パターンとのマッチング結果をログ出力
-    const matchResults = meta.applyToPatterns.map(pattern => {
-      const isMatch = minimatch(relativePath, pattern, { matchBase: true });
-      return { pattern, isMatch };
-    });
+    // ========================================
+    // 順序評価ロジック（gitignore風の動作）
+    // ========================================
+    // パターンを順番に評価し、マッチしたパターンで結果を上書きしていく。
+    // これにより、後のパターンが優先される仕組みを実現。
+    //
+    // 例: ["**/*.ts", "!**/*.spec.ts", "src/special.spec.ts"]
+    //   - src/app.ts → ①でtrue → 最終結果: true
+    //   - src/app.spec.ts → ①でtrue → ②でfalse → 最終結果: false
+    //   - src/special.spec.ts → ①でtrue → ②でfalse → ③でtrue → 最終結果: true
+    // ========================================
 
-    const isApplicable = matchResults.some(r => r.isMatch);
+    // 初期状態はfalse（何もマッチしない状態からスタート）
+    // includeパターンにマッチすることで初めてtrueになる
+    let isApplicable = false;
+
+    // デバッグログ用に各パターンの評価結果を記録
+    const evaluationSteps: Array<{
+      pattern: string;              // 元のパターン（"!**/*.spec.ts"など）
+      type: 'include' | 'exclude';  // パターンのタイプ
+      actualPattern: string;        // "!"を除いた実際のglobパターン
+      matches: boolean;             // minimatchの結果
+      result: 'included' | 'excluded' | 'no-match';  // このパターンによる評価結果
+    }> = [];
+
+    // パターンを配列の順序通りに評価
+    for (const pattern of meta.applyToPatterns) {
+      // パターンが"!"で始まる場合は除外パターン
+      const isNegation = pattern.startsWith('!');
+
+      // "!"を除去して実際のglobパターンを取得
+      // 例: "!**/*.spec.ts" → "**/*.spec.ts"
+      const actualPattern = isNegation ? pattern.slice(1) : pattern;
+
+      // minimatchでファイルパスとパターンをマッチング
+      const matches = minimatch(relativePath, actualPattern, { matchBase: true });
+
+      // マッチした場合のみ、isApplicableを更新
+      if (matches) {
+        // includeパターン（"!"なし）の場合: isApplicable = true
+        // excludeパターン（"!"あり）の場合: isApplicable = false
+        // これにより、最後にマッチしたパターンの結果が優先される
+        isApplicable = !isNegation;
+      }
+
+      // デバッグ情報を記録（ログ出力用）
+      evaluationSteps.push({
+        pattern,
+        type: isNegation ? 'exclude' : 'include',
+        actualPattern,
+        matches,
+        result: matches ? (isNegation ? 'excluded' : 'included') : 'no-match'
+      });
+    }
 
     // デバッグログ出力
     console.log(`[filterPromptsByTarget] Prompt "${promptFileName}":`);
+    console.log(`  Target: ${relativePath}`);
     console.log(`  applyTo patterns: ${JSON.stringify(meta.applyToPatterns)}`);
-    matchResults.forEach(({ pattern, isMatch }) => {
-      console.log(`    - Pattern "${pattern}" vs "${relativePath}" → ${isMatch ? "MATCH" : "NO MATCH"}`);
+    console.log(`  Evaluation steps:`);
+    evaluationSteps.forEach((step, index) => {
+      console.log(`    [${index + 1}] Pattern: "${step.pattern}" (type: ${step.type})`);
+      console.log(`        Actual pattern: "${step.actualPattern}"`);
+      console.log(`        Matches: ${step.matches ? "YES" : "NO"}`);
+      console.log(`        Result: ${step.result}`);
     });
-    console.log(`  Result: ${isApplicable ? "APPLICABLE" : "NOT APPLICABLE"}`);
+    console.log(`  Final result: ${isApplicable ? "APPLICABLE ✓" : "NOT APPLICABLE ✗"}`);
 
     return isApplicable;
   });

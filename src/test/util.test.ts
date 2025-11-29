@@ -540,4 +540,215 @@ suite("Util Test Suite", function () {
       assert.strictEqual(result2.length, 0);
     });
   });
+
+  suite("Prompt Filtering with Exclusion Patterns Test Suite", function () {
+    const workspaceRoot = "/workspace";
+
+    test("基本的な除外パターン: すべての.tsxファイルから.stories.tsxを除外", function () {
+      const prompts = [
+        {
+          filePath: "react.md",
+          applyToPatterns: ["**/*.tsx", "!**/*.stories.tsx"],
+          content: "React component review"
+        },
+      ];
+
+      // 通常の.tsxファイル → 適用される
+      const result1 = filterPromptsByTarget(prompts, "/workspace/src/Button.tsx", workspaceRoot);
+      assert.strictEqual(result1.length, 1);
+      assert.strictEqual(result1[0].filePath, "react.md");
+
+      // .stories.tsxファイル → 除外される
+      const result2 = filterPromptsByTarget(prompts, "/workspace/src/Button.stories.tsx", workspaceRoot);
+      assert.strictEqual(result2.length, 0);
+    });
+
+    test("再度includeパターン: 特定のテストファイルのみ含める", function () {
+      const prompts = [
+        {
+          filePath: "typescript.md",
+          applyToPatterns: [
+            "**/*.ts",
+            "!**/*.spec.ts",
+            "src/special.spec.ts"
+          ],
+          content: "TypeScript review"
+        },
+      ];
+
+      // 通常の.tsファイル → 適用される
+      const result1 = filterPromptsByTarget(prompts, "/workspace/src/app.ts", workspaceRoot);
+      assert.strictEqual(result1.length, 1);
+
+      // 一般的なテストファイル → 除外される
+      const result2 = filterPromptsByTarget(prompts, "/workspace/src/app.spec.ts", workspaceRoot);
+      assert.strictEqual(result2.length, 0);
+
+      // 特別なテストファイル → 含まれる
+      const result3 = filterPromptsByTarget(prompts, "/workspace/src/special.spec.ts", workspaceRoot);
+      assert.strictEqual(result3.length, 1);
+    });
+
+    test("順序評価の確認: パターンの並び順で結果が変わる", function () {
+      // パターン1: include → exclude の順
+      const prompts1 = [
+        {
+          filePath: "order1.md",
+          applyToPatterns: ["*.ts", "!*.spec.ts"],
+          content: "Order 1"
+        },
+      ];
+      const result1 = filterPromptsByTarget(prompts1, "/workspace/app.spec.ts", workspaceRoot);
+      assert.strictEqual(result1.length, 0, "*.spec.tsは除外されるべき");
+
+      // パターン2: exclude → include の順（逆順）
+      const prompts2 = [
+        {
+          filePath: "order2.md",
+          applyToPatterns: ["!*.spec.ts", "*.ts"],
+          content: "Order 2"
+        },
+      ];
+      const result2 = filterPromptsByTarget(prompts2, "/workspace/app.spec.ts", workspaceRoot);
+      assert.strictEqual(result2.length, 1, "後のパターン*.tsが優先されて含まれるべき");
+    });
+
+    test("複雑な除外パターン: 複数階層の除外と再include", function () {
+      const prompts = [
+        {
+          filePath: "complex.md",
+          applyToPatterns: [
+            "src/**/*.ts",           // srcディレクトリ配下の全.tsファイル
+            "!src/test/**/*.ts",     // testディレクトリは除外
+            "!src/**/*.generated.ts", // 生成ファイルは除外
+            "src/test/critical.ts"   // でもこのファイルは含める
+          ],
+          content: "Complex review"
+        },
+      ];
+
+      // 通常のsrcファイル → 含まれる
+      assert.strictEqual(
+        filterPromptsByTarget(prompts, "/workspace/src/app.ts", workspaceRoot).length,
+        1
+      );
+
+      // testディレクトリのファイル → 除外
+      assert.strictEqual(
+        filterPromptsByTarget(prompts, "/workspace/src/test/unit.ts", workspaceRoot).length,
+        0
+      );
+
+      // 生成ファイル → 除外
+      assert.strictEqual(
+        filterPromptsByTarget(prompts, "/workspace/src/api.generated.ts", workspaceRoot).length,
+        0
+      );
+
+      // 特別なテストファイル → 含まれる
+      assert.strictEqual(
+        filterPromptsByTarget(prompts, "/workspace/src/test/critical.ts", workspaceRoot).length,
+        1
+      );
+    });
+
+    test("後方互換性: `!`なしの既存パターンが引き続き動作", function () {
+      const prompts = [
+        { filePath: "java.md", applyToPatterns: ["*.java"], content: "Java prompt" },
+        { filePath: "multi.md", applyToPatterns: ["*.ts", "*.tsx"], content: "Multi prompt" },
+      ];
+
+      // 既存の動作が変わらないことを確認
+      const result1 = filterPromptsByTarget(prompts, "/workspace/Main.java", workspaceRoot);
+      assert.strictEqual(result1.length, 1);
+      assert.strictEqual(result1[0].filePath, "java.md");
+
+      const result2 = filterPromptsByTarget(prompts, "/workspace/app.tsx", workspaceRoot);
+      assert.strictEqual(result2.length, 1);
+      assert.strictEqual(result2[0].filePath, "multi.md");
+    });
+
+    test("excludeパターンのみ: includeパターンがない場合は何もマッチしない", function () {
+      const prompts = [
+        {
+          filePath: "exclude_only.md",
+          applyToPatterns: ["!*.spec.ts"],
+          content: "Exclude only"
+        },
+      ];
+
+      // excludeパターンのみの場合、何もマッチしない
+      const result1 = filterPromptsByTarget(prompts, "/workspace/app.ts", workspaceRoot);
+      assert.strictEqual(result1.length, 0);
+
+      const result2 = filterPromptsByTarget(prompts, "/workspace/app.spec.ts", workspaceRoot);
+      assert.strictEqual(result2.length, 0);
+    });
+
+    test("空配列: applyToPatternsが空の場合は全ファイル対象（後方互換性）", function () {
+      const prompts = [
+        { filePath: "all.md", applyToPatterns: [], content: "All files" },
+      ];
+
+      const result = filterPromptsByTarget(prompts, "/workspace/any_file.xyz", workspaceRoot);
+      assert.strictEqual(result.length, 1);
+    });
+
+    test("連続する除外パターン: 複数の除外パターンが連続する場合", function () {
+      const prompts = [
+        {
+          filePath: "multiple_exclude.md",
+          applyToPatterns: [
+            "**/*.ts",
+            "!**/*.spec.ts",
+            "!**/*.test.ts",
+            "!**/*.d.ts"
+          ],
+          content: "Multiple excludes"
+        },
+      ];
+
+      // 通常の.tsファイル → 含まれる
+      assert.strictEqual(
+        filterPromptsByTarget(prompts, "/workspace/app.ts", workspaceRoot).length,
+        1
+      );
+
+      // .spec.tsファイル → 除外
+      assert.strictEqual(
+        filterPromptsByTarget(prompts, "/workspace/app.spec.ts", workspaceRoot).length,
+        0
+      );
+
+      // .test.tsファイル → 除外
+      assert.strictEqual(
+        filterPromptsByTarget(prompts, "/workspace/app.test.ts", workspaceRoot).length,
+        0
+      );
+
+      // .d.tsファイル → 除外
+      assert.strictEqual(
+        filterPromptsByTarget(prompts, "/workspace/types.d.ts", workspaceRoot).length,
+        0
+      );
+    });
+
+    test("matchBaseオプションの動作確認: 除外パターンでも有効", function () {
+      const prompts = [
+        {
+          filePath: "matchbase.md",
+          applyToPatterns: ["*.ts", "!*.spec.ts"],
+          content: "MatchBase test"
+        },
+      ];
+
+      // 深い階層でもベース名でマッチング
+      const result = filterPromptsByTarget(
+        prompts,
+        "/workspace/very/long/path/to/file.spec.ts",
+        workspaceRoot
+      );
+      assert.strictEqual(result.length, 0, "深い階層でも除外パターンが効くべき");
+    });
+  });
 });
