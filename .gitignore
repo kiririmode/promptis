@@ -131,6 +131,7 @@ dist
 
 .DS_Store
 *.vsix
+*.vsix.txt
 .vscode
 
 # draw.io
