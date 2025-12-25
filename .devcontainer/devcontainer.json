@@ -4,6 +4,12 @@
         "ghcr.io/devcontainers/features/java:1": {
             "version": "17",
             "installMaven": true
+        },
+        "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+
+        },
+        "ghcr.io/devcontainers-extra/features/direnv:1": {
+            "moby": true
         }
     },
     "build": {
@@ -21,18 +27,17 @@
                 "ms-azuretools.vscode-docker",
                 "connor4312.esbuild-problem-matchers",
                 "ms-vscode.extension-test-runner",
-                "exiasr.hadolint",
-                "GitHub.copilot",
-                "GitHub.copilot-chat"
+                "exiasr.hadolint"
             ]
         }
     },
-    "postCreateCommand": "npm install",
+    "postCreateCommand": "npm install && curl -LsSf https://astral.sh/uv/install.sh | sh && bash .devcontainer/init-direnv.sh",
+    "postStartCommand": "curl -fsSL https://claude.ai/install.sh | bash",
     "forwardPorts": [
         3000
     ],
     "mounts": [
         "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached"
     ],
-    "remoteUser": "node"
+    "remoteUser": "node",
 }

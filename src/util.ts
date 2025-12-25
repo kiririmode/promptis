@@ -1,7 +1,17 @@
 import fs from "fs";
+import matter from "gray-matter";
 import { minimatch } from "minimatch";
 import path from "path";
 import * as vscode from "vscode";
+
+/**
+ * プロンプトファイルのメタデータ
+ */
+export interface PromptMetadata {
+  filePath: string;           // プロンプトファイルのパス
+  applyToPatterns: string[];  // Front Matterで指定されたパターン（空配列=全適用）
+  content: string;            // Front Matter除外後のコンテンツ
+}
 
 /**
  * 指定したディレクトリ内のファイルを再帰的に取得する関数
@@ -55,6 +65,140 @@ export function findPromptFiles(directoryPath: string, ignorePatterns: string[])
     .filter((p) => ignorePatterns.every((pattern) => !minimatch(p, pattern)));
 
   return promptFiles;
+}
+
+/**
+ * プロンプトファイルのFront Matterを解析し、メタデータを取得
+ *
+ * @param filePath - プロンプトファイルのパス
+ * @returns PromptMetadata
+ *
+ * @example
+ * const meta = parsePromptFile('/path/to/prompt.md');
+ * // meta.applyToPatterns が空の場合は全ファイル対象（後方互換性）
+ */
+export function parsePromptFile(filePath: string): PromptMetadata {
+  const fileContent = fs.readFileSync(filePath, "utf8");
+  const parsed = matter(fileContent);
+
+  let applyToPatterns: string[] = [];
+  if (parsed.data.applyTo) {
+    // 文字列または配列に対応
+    applyToPatterns = Array.isArray(parsed.data.applyTo)
+      ? parsed.data.applyTo
+      : [parsed.data.applyTo];
+  }
+
+  return {
+    filePath,
+    applyToPatterns,  // 空配列の場合は全ファイル対象（後方互換性）
+    content: parsed.content
+  };
+}
+
+/**
+ * 対象ファイルパスに適用すべきプロンプトメタデータをフィルタリング
+ *
+ * @param promptMetadata - プロンプトメタデータの配列
+ * @param targetFilePath - 対象ファイルの絶対パス
+ * @param workspaceRoot - ワークスペースルートの絶対パス
+ * @returns フィルタリングされたプロンプトメタデータの配列
+ *
+ * @example
+ * const applicable = filterPromptsByTarget(allPrompts, '/workspace/src/Main.java', '/workspace');
+ * // *.java にマッチするプロンプトのみ返される
+ */
+export function filterPromptsByTarget(
+  promptMetadata: PromptMetadata[],
+  targetFilePath: string,
+  workspaceRoot: string
+): PromptMetadata[] {
+  // 絶対パスをワークスペースルートからの相対パスに変換
+  const relativePath = path.relative(workspaceRoot, targetFilePath);
+
+  console.log(`[filterPromptsByTarget] Target file: ${targetFilePath}`);
+  console.log(`[filterPromptsByTarget] Relative path: ${relativePath}`);
+  console.log(`[filterPromptsByTarget] Workspace root: ${workspaceRoot}`);
+
+  return promptMetadata.filter(meta => {
+    const promptFileName = path.basename(meta.filePath);
+
+    // applyToPatternsが空の場合は全ファイル対象（後方互換性）
+    if (meta.applyToPatterns.length === 0) {
+      console.log(`[filterPromptsByTarget] Prompt "${promptFileName}": No applyTo patterns → MATCH (applies to all files)`);
+      return true;
+    }
+
+    // ========================================
+    // 順序評価ロジック（gitignore風の動作）
+    // ========================================
+    // パターンを順番に評価し、マッチしたパターンで結果を上書きしていく。
+    // これにより、後のパターンが優先される仕組みを実現。
+    //
+    // 例: ["**/*.ts", "!**/*.spec.ts", "src/special.spec.ts"]
+    //   - src/app.ts → ①でtrue → 最終結果: true
+    //   - src/app.spec.ts → ①でtrue → ②でfalse → 最終結果: false
+    //   - src/special.spec.ts → ①でtrue → ②でfalse → ③でtrue → 最終結果: true
+    // ========================================
+
+    // 初期状態はfalse（何もマッチしない状態からスタート）
+    // includeパターンにマッチすることで初めてtrueになる
+    let isApplicable = false;
+
+    // デバッグログ用に各パターンの評価結果を記録
+    const evaluationSteps: Array<{
+      pattern: string;              // 元のパターン（"!**/*.spec.ts"など）
+      type: 'include' | 'exclude';  // パターンのタイプ
+      actualPattern: string;        // "!"を除いた実際のglobパターン
+      matches: boolean;             // minimatchの結果
+      result: 'included' | 'excluded' | 'no-match';  // このパターンによる評価結果
+    }> = [];
+
+    // パターンを配列の順序通りに評価
+    for (const pattern of meta.applyToPatterns) {
+      // パターンが"!"で始まる場合は除外パターン
+      const isNegation = pattern.startsWith('!');
+
+      // "!"を除去して実際のglobパターンを取得
+      // 例: "!**/*.spec.ts" → "**/*.spec.ts"
+      const actualPattern = isNegation ? pattern.slice(1) : pattern;
+
+      // minimatchでファイルパスとパターンをマッチング
+      const matches = minimatch(relativePath, actualPattern, { matchBase: true });
+
+      // マッチした場合のみ、isApplicableを更新
+      if (matches) {
+        // includeパターン（"!"なし）の場合: isApplicable = true
+        // excludeパターン（"!"あり）の場合: isApplicable = false
+        // これにより、最後にマッチしたパターンの結果が優先される
+        isApplicable = !isNegation;
+      }
+
+      // デバッグ情報を記録（ログ出力用）
+      evaluationSteps.push({
+        pattern,
+        type: isNegation ? 'exclude' : 'include',
+        actualPattern,
+        matches,
+        result: matches ? (isNegation ? 'excluded' : 'included') : 'no-match'
+      });
+    }
+
+    // デバッグログ出力
+    console.log(`[filterPromptsByTarget] Prompt "${promptFileName}":`);
+    console.log(`  Target: ${relativePath}`);
+    console.log(`  applyTo patterns: ${JSON.stringify(meta.applyToPatterns)}`);
+    console.log(`  Evaluation steps:`);
+    evaluationSteps.forEach((step, index) => {
+      console.log(`    [${index + 1}] Pattern: "${step.pattern}" (type: ${step.type})`);
+      console.log(`        Actual pattern: "${step.actualPattern}"`);
+      console.log(`        Matches: ${step.matches ? "YES" : "NO"}`);
+      console.log(`        Result: ${step.result}`);
+    });
+    console.log(`  Final result: ${isApplicable ? "APPLICABLE ✓" : "NOT APPLICABLE ✗"}`);
+
+    return isApplicable;
+  });
 }
 
 /**

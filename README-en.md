@@ -77,6 +77,131 @@ In Promptis, you can also use the following chat variables:
 | `#dir:[Directory]` | By including `#dir` in the prompt, you can specify the directory to which the prompt will be applied. The prompt will be executed on all files under the specified directory. You can also directly specify the directory in the format `#dir:path/to/dir`. | `@promptis /codereviewCodeStandards #dir` |
 | `#filter:[GlobPattern]` | By including `#filter:[GlobPattern]` in the prompt, you can narrow down the files extracted by the `#dir` specification to only those that match the GlobPattern. For the patterns that can be specified, refer to [GlobPattern](https://code.visualstudio.com/api/references/vscode-api#GlobPattern). | `@promptis /codereviewCodeStandards #dir #filter:**/*.{ts,js}`
 
+### Prompt File Front Matter
+
+You can specify the `applyTo` field in Front Matter format in prompt files (`.md`) to apply prompts only to specific file extensions or patterns. Paths are specified relative to the workspace root. This allows you to have different review perspectives for each file type.
+
+#### Basic Format
+
+```markdown
+---
+applyTo: "*.java"
+---
+You are an excellent Java programmer with responsibility for Java coding standards.
+...
+```
+
+This prompt will only be applied to `.java` files.
+
+#### Multiple Extensions
+
+You can specify multiple extensions in array format:
+
+```markdown
+---
+applyTo: ["*.java", "*.kt"]
+---
+```
+
+#### Using Glob Patterns
+
+More flexible pattern matching is also possible:
+
+```markdown
+---
+applyTo: "src/**/*.py"
+---
+```
+
+#### Using Exclusion Patterns
+
+You can exclude specific files by using patterns starting with `!`. Patterns are evaluated in order, with later patterns taking precedence.
+
+##### Basic Exclusion
+
+```markdown
+---
+applyTo:
+  - "**/*.tsx"           # Include all .tsx files
+  - "!**/*.stories.tsx"  # Exclude Storybook files
+---
+```
+
+This prompt applies to `.tsx` files but excludes `.stories.tsx` files.
+
+##### Re-including Patterns
+
+You can also include specific files from excluded patterns:
+
+```markdown
+---
+applyTo:
+  - "**/*.ts"            # Include all .ts files
+  - "!**/*.spec.ts"      # Exclude test files
+  - "src/special.spec.ts" # But include this specific file
+---
+```
+
+##### Complex Example
+
+```markdown
+---
+applyTo:
+  - "src/**/*.ts"           # All .ts files in src directory
+  - "!src/test/**/*.ts"     # Exclude test directory
+  - "!src/**/*.generated.ts" # Exclude generated files
+  - "src/test/critical.ts"   # Include specific test file
+---
+```
+
+##### Pattern Evaluation Order
+
+Patterns are evaluated in array order, with later patterns taking precedence:
+
+```markdown
+---
+# Pattern 1: Normal exclusion
+applyTo:
+  - "*.ts"        # Include all .ts files
+  - "!*.spec.ts"  # Exclude test files
+# → *.spec.ts files are excluded
+---
+```
+
+```markdown
+---
+# Pattern 2: Reversed order (later pattern wins)
+applyTo:
+  - "!*.spec.ts"  # Exclude test files (but overridden by next pattern)
+  - "*.ts"        # Include all .ts files
+# → *.spec.ts files are included (later pattern takes precedence)
+---
+```
+
+**Note:** If you only specify exclusion patterns (`!`), nothing will match by default. Always include at least one include pattern.
+
+#### Backward Compatibility
+
+If the `applyTo` field is not specified, the prompt will be applied to all files (same as the existing behavior).
+
+#### Usage Example
+
+For example, with the following prompt file structure:
+
+```
+prompts/codestandards/
+├── 01_java_readability.md       (applyTo: "*.java")
+├── 02_java_naming.md            (applyTo: "*.java")
+├── 03_python_pep8.md            (applyTo: "*.py")
+├── 04_typescript_style.md       (applyTo: ["*.ts", "*.tsx"])
+├── 05_general_security.md       (applyTo not specified = applies to all files)
+└── 06_sql_injection.md          (applyTo: "*.sql")
+```
+
+- When reviewing `Main.java` → `01_java_readability.md`, `02_java_naming.md`, and `05_general_security.md` will be applied
+- When reviewing `app.py` → `03_python_pep8.md` and `05_general_security.md` will be applied
+- When reviewing `component.tsx` → `04_typescript_style.md` and `05_general_security.md` will be applied
+
 ## Requirements
 
 - [VS Code](https://code.visualstudio.com/) [version.1.91.0](https://code.visualstudio.com/updates/v1_91) or later

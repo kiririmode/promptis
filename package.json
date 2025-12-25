@@ -3,7 +3,7 @@
   "publisher": "tis",
   "displayName": "Promptis",
   "description": "Promptis is a tool that enhances coding efficiency and consistency by semi-automating the execution of predefined prompts through GitHub Copilot Chat.",
-  "version": "1.4.0-alpha.0",
+  "version": "1.4.0-alpha.3",
   "license": "Apache-2.0",
   "engines": {
     "vscode": "^1.93.0"
@@ -162,6 +162,7 @@
     "typescript": "^5.8.2"
   },
   "dependencies": {
+    "gray-matter": "^4.0.3",
     "minimatch": "^10.0.1",
     "proxy-agent": "^6.4.0"
   },

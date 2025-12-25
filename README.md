@@ -81,6 +81,131 @@ Promptisではさらに、次のチャット変数を利用できます。
 | `#dir:[Directory]` | プロンプト中に`#dir`を含めることで、プロンプトを適用するディレクトリを指定できる。指定したディレクトリ配下の全ファイルに対してプロンプトが実行される。また、`#dir:path/to/dir`の形式で直接ディレクトリを指定することも可能。 | `@promptis /codereviewCodeStandards #dir` |
 | `#filter:[GlobPattern]` | プロンプト中に`#filter:[GlobPattern]`を含めることで、`#dir`指定によって抽出されたファイルのうち、GlobPatternに合致するもののみを適用対象として絞り込める。指定できるパターンについては[GlobPattern](https://code.visualstudio.com/api/references/vscode-api#GlobPattern)を参照。 | `@promptis /codereviewCodeStandards #dir #filter:**/*.{ts,js}`
 
+### プロンプトファイルのFront Matter
+
+プロンプトファイル（`.md`）にFront Matter形式で`applyTo`フィールドを指定することで、特定のファイル拡張子やパターンにのみプロンプトを適用することができます。パスはワークスペースルートからの相対パスで指定します。これにより、ファイルタイプごとに異なるレビュー観点を持つことが可能になります。
+
+#### 基本形式
+
+```markdown
+---
+applyTo: "*.java"
+---
+あなたは極めて優秀なJavaプログラマーで、Javaコーディング規約に対する責任を持っています。
+...
+```
+
+このプロンプトは`.java`ファイルに対してのみ適用されます。
+
+#### 複数拡張子の指定
+
+配列形式で複数の拡張子を指定できます：
+
+```markdown
+---
+applyTo: ["*.java", "*.kt"]
+---
+```
+
+#### Globパターンの使用
+
+より柔軟なパターンマッチングも可能です：
+
+```markdown
+---
+applyTo: "src/**/*.py"
+---
+```
+
+#### 除外パターンの使用
+
+`!`で始まるパターンを使用することで、特定のファイルを除外できます。パターンは順序通りに評価され、後のパターンが優先されます。
+
+##### 基本的な除外
+
+```markdown
+---
+applyTo:
+  - "**/*.tsx"           # すべての.tsxファイルを含める
+  - "!**/*.stories.tsx"  # Storybookファイルは除外
+---
+```
+
+このプロンプトは`.tsx`ファイルに適用されますが、`.stories.tsx`ファイルは除外されます。
+
+##### 再度includeパターン
+
+除外したファイルの中から特定のファイルのみを含めることも可能です：
+
+```markdown
+---
+applyTo:
+  - "**/*.ts"            # すべての.tsファイルを含める
+  - "!**/*.spec.ts"      # テストファイルは除外
+  - "src/special.spec.ts" # でもこのファイルは含める
+---
+```
+
+##### 複雑な例
+
+```markdown
+---
+applyTo:
+  - "src/**/*.ts"           # srcディレクトリ配下の全.tsファイル
+  - "!src/test/**/*.ts"     # testディレクトリは除外
+  - "!src/**/*.generated.ts" # 生成ファイルは除外
+  - "src/test/critical.ts"   # 特定のテストファイルは含める
+---
+```
+
+##### パターン評価の順序
+
+パターンは配列の順序通りに評価され、後のパターンが優先されます：
+
+```markdown
+---
+# パターン1: 通常の除外
+applyTo:
+  - "*.ts"        # すべての.tsファイルを含める
+  - "!*.spec.ts"  # テストファイルは除外
+# → *.spec.ts は除外される
+---
+```
+
+```markdown
+---
+# パターン2: 逆順（後のパターンが優先）
+applyTo:
+  - "!*.spec.ts"  # テストファイルを除外（しかし次のパターンで上書き）
+  - "*.ts"        # すべての.tsファイルを含める
+# → *.spec.ts も含まれる（後のパターンが優先）
+---
+```
+
+**注意:** 除外パターン（`!`）のみを指定した場合、デフォルトでは何もマッチしません。必ず少なくとも1つのincludeパターンを指定してください。
+
+#### 後方互換性
+
+`applyTo`フィールドが未指定の場合、そのプロンプトは全てのファイルに適用されます（既存の動作と同じ）。
+
+#### 使用例
+
+例えば、以下のようなプロンプトファイル構成の場合：
+
+```
+prompts/codestandards/
+├── 01_java_readability.md       (applyTo: "*.java")
+├── 02_java_naming.md            (applyTo: "*.java")
+├── 03_python_pep8.md            (applyTo: "*.py")
+├── 04_typescript_style.md       (applyTo: ["*.ts", "*.tsx"])
+├── 05_general_security.md       (applyTo未指定 = 全ファイル対象)
+└── 06_sql_injection.md          (applyTo: "*.sql")
+```
+
+- `Main.java`をレビューする場合 → `01_java_readability.md`、`02_java_naming.md`、`05_general_security.md`が適用される
+- `app.py`をレビューする場合 → `03_python_pep8.md`、`05_general_security.md`が適用される
+- `component.tsx`をレビューする場合 → `04_typescript_style.md`、`05_general_security.md`が適用される
+
 ## Requirements
 
 - [VS Code](https://code.visualstudio.com/) が[version.1.91.0](https://code.visualstudio.com/updates/v1_91)以降
