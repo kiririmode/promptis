@@ -6,10 +6,12 @@
             "installMaven": true
         },
         "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
-
+            
         },
         "ghcr.io/devcontainers-extra/features/direnv:1": {
             "moby": true
+        },
+        "ghcr.io/devcontainers/features/github-cli:1": {
         }
     },
     "build": {
@@ -31,13 +33,22 @@
             ]
         }
     },
-    "postCreateCommand": "npm install && curl -LsSf https://astral.sh/uv/install.sh | sh && bash .devcontainer/init-direnv.sh",
+    "postCreateCommand": "npm install && curl -LsSf https://astral.sh/uv/install.sh | sh && bash .devcontainer/init-direnv.sh && .devcontainer/fix-claude-permissions.sh ",
     "postStartCommand": "curl -fsSL https://claude.ai/install.sh | bash",
     "forwardPorts": [
         3000
     ],
     "mounts": [
-        "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached"
+        {
+            "source": "${localWorkspaceFolder}",
+            "target": "/workspace",
+            "type": "bind"
+        },
+        {
+            "source": "${localEnv:HOME}/.claude",
+            "target": "/home/node/.claude",
+            "type": "bind"
+        }
     ],
     "remoteUser": "node",
 }
