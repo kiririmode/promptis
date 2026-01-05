@@ -23,6 +23,10 @@ Promptisは、プロンプト実行を半自動化することでGitHub Copilot 
 - `npm run build` - ライセンスレポートの作成とVSIXパッケージの作成
 - `npm run build:vsix` - 配布用VSIXパッケージの作成
 
+# オペレーション
+
+- GitHub とのI/Fは、git コマンドおよび gh コマンドを利用すること
+
 ## アーキテクチャ
 
 ### コアコンポーネント
