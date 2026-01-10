@@ -2,15 +2,25 @@ import path from "path";
 import * as vscode from "vscode";
 import { getDiffContent, getRepository, parseGitRange, type GitRange } from "../gitUtil";
 import { filterPromptsByTarget, type PromptMetadata } from "../util";
+import { FileReviewPhase } from "../review/FileReviewPhase";
+import { ChangesetReviewPhase } from "../review/ChangesetReviewPhase";
+import type { PromptMetadataWithScope } from "../review/types";
 import type { ReviewCommandHandler } from "./CommandRouter";
 
 /**
  * 差分レビューコマンドハンドラー
- * Phase 1: シンプルなファイル単位レビュー
+ * Phase 2: 二段パイプライン（file/changeset）対応
  */
 export class DiffReviewCommandHandler implements ReviewCommandHandler {
+  private fileReviewPhase: FileReviewPhase;
+  private changesetReviewPhase: ChangesetReviewPhase;
+
+  constructor() {
+    this.fileReviewPhase = new FileReviewPhase();
+    this.changesetReviewPhase = new ChangesetReviewPhase();
+  }
   /**
-   * 差分レビューを実行
+   * 差分レビューを実行（二段パイプライン）
    * @param request - チャットリクエスト
    * @param context - チャットコンテキスト
    * @param stream - レスポンスストリーム
@@ -56,61 +66,40 @@ export class DiffReviewCommandHandler implements ReviewCommandHandler {
     }
 
     stream.markdown(`変更されたファイル: **${diffResults.length}** 件\n\n`);
-    stream.markdown(`----\n\n`);
 
     // ワークスペースルートを取得
     const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "";
 
-    // 4. 各差分ファイルをレビュー
-    let reviewedCount = 0;
-    const skippedFiles: string[] = [];
+    // プロンプトメタデータを PromptMetadataWithScope として扱う
+    // parsePromptFile が scope フィールドを含むため、キャスト可能
+    const promptMetadataWithScope = promptMetadata as PromptMetadataWithScope[];
 
-    for (const diffResult of diffResults) {
-      if (token.isCancellationRequested) {
-        stream.markdown("\n⚠️ レビューがキャンセルされました。\n");
-        break;
-      }
+    // 4. Phase 1: ファイル単位レビュー (scope: file)
+    stream.markdown(`## ファイル単位レビュー\n\n`);
+    const fileResults = await this.fileReviewPhase.execute(
+      diffResults,
+      promptMetadataWithScope,
+      request.model,
+      token,
+      stream,
+      workspaceRoot
+    );
 
-      // 該当するプロンプトを取得
-      const applicablePrompts = filterPromptsByTarget(
-        promptMetadata,
-        diffResult.filePath,
-        workspaceRoot
-      );
-
-      if (applicablePrompts.length === 0) {
-        skippedFiles.push(diffResult.relativePath);
-        continue;
-      }
-
-      // ファイルヘッダーを出力
-      stream.markdown(`## ${diffResult.relativePath}\n\n`);
-      stream.markdown(`変更タイプ: **${diffResult.changeType}**\n\n`);
-
-      // 各プロンプトでレビュー
-      for (const prompt of applicablePrompts) {
-        if (token.isCancellationRequested) {
-          break;
-        }
-
-        await this.reviewWithPrompt(diffResult, prompt, request.model, token, stream, workspaceRoot);
-      }
-
-      reviewedCount++;
-      stream.markdown(`----\n\n`);
-    }
+    // 5. Phase 2: 変更集合レビュー (scope: changeset)
+    await this.changesetReviewPhase.execute(
+      diffResults,
+      fileResults,
+      promptMetadataWithScope,
+      request.model,
+      token,
+      stream,
+      workspaceRoot
+    );
 
     // サマリーを出力
     stream.markdown(`## レビュー完了\n\n`);
-    stream.markdown(`- レビュー済み: **${reviewedCount}** ファイル\n`);
-
-    if (skippedFiles.length > 0) {
-      stream.markdown(`- スキップ: **${skippedFiles.length}** ファイル（マッチするプロンプトなし）\n`);
-      stream.markdown(`\n⚠️ スキップされたファイル:\n`);
-      for (const fileName of skippedFiles) {
-        stream.markdown(`  - ${fileName}\n`);
-      }
-    }
+    stream.markdown(`- ファイル単位レビュー: **${fileResults.length}** ファイル\n`);
+    stream.markdown(`- 変更集合レビュー: 実行完了\n`);
   }
 
   /**
@@ -147,52 +136,4 @@ export class DiffReviewCommandHandler implements ReviewCommandHandler {
     }
   }
 
-  /**
-   * プロンプトを使って差分をレビュー
-   * @param diffResult - 差分結果
-   * @param prompt - プロンプトメタデータ
-   * @param model - 言語モデル
-   * @param token - キャンセルトークン
-   * @param stream - レスポンスストリーム
-   * @param workspaceRoot - ワークスペースルート
-   */
-  private async reviewWithPrompt(
-    diffResult: any,
-    prompt: PromptMetadata,
-    model: vscode.LanguageModelChat,
-    token: vscode.CancellationToken,
-    stream: vscode.ChatResponseStream,
-    workspaceRoot: string
-  ): Promise<void> {
-    // プロンプトを構築
-    const messages = [
-      vscode.LanguageModelChatMessage.User(prompt.content),
-      vscode.LanguageModelChatMessage.User(
-        `# ${diffResult.relativePath}\n\n\`\`\`diff\n${diffResult.diff}\n\`\`\``
-      ),
-    ];
-
-    try {
-      // プロンプト情報を出力
-      const promptName = path.basename(prompt.filePath);
-      stream.markdown(`### レビュー: ${promptName}\n\n`);
-
-      // LLMに送信
-      const response = await model.sendRequest(messages, {}, token);
-
-      // ストリーミング出力
-      for await (const chunk of response.text) {
-        stream.markdown(chunk);
-      }
-      stream.markdown('\n\n');
-    } catch (error) {
-      if (error instanceof vscode.LanguageModelError) {
-        console.error('Language model error:', error);
-        stream.markdown(`❌ レビューエラー: ${error.message}\n\n`);
-      } else {
-        console.error('Unexpected error during review:', error);
-        stream.markdown(`❌ 予期しないエラー: ${error}\n\n`);
-      }
-    }
-  }
 }
