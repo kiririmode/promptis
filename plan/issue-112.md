@@ -1071,7 +1071,39 @@ codeReview.diffPath/
 - 既存プロンプトとの完全な後方互換性
 
 **未実装（Phase 3以降）:**
-- 包括的な手動テスト
-- エラーケースの検証
-- パフォーマンス最適化
-- プロンプト設計ガイドライン作成
+- 包括的な手動テスト（要実施）
+- エラーケースの検証（要実施）
+- パフォーマンス最適化（将来対応）
+
+### Phase 3: テストと改善 🚧 進行中（2026-01-10）
+
+**実装済み:**
+- ✅ サンプルプロンプトの作成
+  - `examples/diff-review-prompts/file/` - ファイル単位レビュー用
+    - terraform-review.md
+    - sql-review.md
+    - python-review.md
+    - typescript-review.md
+  - `examples/diff-review-prompts/changeset/` - 変更集合レビュー用
+    - api-consistency.md
+    - schema-consistency.md
+    - overall-review.md
+  - `examples/diff-review-prompts/README.md` - 使い方ガイド
+- ✅ ドキュメント更新
+  - README.md に `/codereviewDiff` コマンドの説明を追加
+  - コマンドマップ、Extension Settings、使用例を追加
+  - `scope` フィールドの説明を追加
+
+**実施済み検証:**
+- ✅ 型チェック成功
+- ✅ コンパイル成功
+- ✅ 全テスト成功（133 passing）
+
+**未実装（要実施）:**
+- 手動テストシナリオの実行
+  - デフォルト範囲での差分レビュー
+  - カスタム範囲指定（#range:）
+  - エラーケースの検証（Gitリポジトリなし、無効な範囲等）
+  - 拡張子別レビューの確認
+  - 変更集合レビューの確認
+  - 出力モードの確認
