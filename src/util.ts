@@ -3,6 +3,7 @@ import matter from "gray-matter";
 import { minimatch } from "minimatch";
 import path from "path";
 import * as vscode from "vscode";
+import type { PromptScope } from "./review/types";
 
 /**
  * プロンプトファイルのメタデータ
@@ -11,6 +12,7 @@ export interface PromptMetadata {
   filePath: string;           // プロンプトファイルのパス
   applyToPatterns: string[];  // Front Matterで指定されたパターン（空配列=全適用）
   content: string;            // Front Matter除外後のコンテンツ
+  scope?: PromptScope;        // プロンプトのスコープ（オプション、デフォルト: 'file'）
 }
 
 /**
@@ -76,6 +78,7 @@ export function findPromptFiles(directoryPath: string, ignorePatterns: string[])
  * @example
  * const meta = parsePromptFile('/path/to/prompt.md');
  * // meta.applyToPatterns が空の場合は全ファイル対象（後方互換性）
+ * // meta.scope が指定されていない場合は 'file' として扱われる（後方互換性）
  */
 export function parsePromptFile(filePath: string): PromptMetadata {
   const fileContent = fs.readFileSync(filePath, "utf8");
@@ -89,10 +92,20 @@ export function parsePromptFile(filePath: string): PromptMetadata {
       : [parsed.data.applyTo];
   }
 
+  // scope フィールドの解析（デフォルト: 'file'）
+  let scope: PromptScope = 'file';
+  if (parsed.data.scope) {
+    const scopeValue = parsed.data.scope.toLowerCase();
+    if (scopeValue === 'changeset' || scopeValue === 'file') {
+      scope = scopeValue as PromptScope;
+    }
+  }
+
   return {
     filePath,
     applyToPatterns,  // 空配列の場合は全ファイル対象（後方互換性）
-    content: parsed.content
+    content: parsed.content,
+    scope,  // 後方互換性のため、デフォルトは 'file'
   };
 }
 

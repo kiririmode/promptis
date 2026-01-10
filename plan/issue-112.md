@@ -1036,3 +1036,42 @@ codeReview.diffPath/
 - `scope` フィールドによる二段パイプライン（file/changeset）
 - FileReviewPhase、ChangesetReviewPhase
 - 変更集合全体の整合性チェック
+
+### Phase 2: 二段パイプライン実装 ✅ 完了（2026-01-10）
+
+**実装済みファイル:**
+- ✅ `src/review/types.ts` - レビュー関連の型定義
+  - `PromptScope`: 'file' | 'changeset'
+  - `PromptMetadataWithScope`: scope フィールドを含む拡張メタデータ
+  - `FileReviewResult`: ファイル単位レビュー結果
+- ✅ `src/review/FileReviewPhase.ts` - ファイル単位レビュー実装
+  - scope: file のプロンプトで各ファイルの差分をレビュー
+  - 既存の `filterPromptsByTarget()` 活用
+- ✅ `src/review/ChangesetReviewPhase.ts` - 変更集合レビュー実装
+  - scope: changeset のプロンプトで全体の整合性チェック
+  - 全ファイルの差分をまとめてLLMに送信
+- ✅ `src/util.ts` - scope フィールド解析追加
+  - `parsePromptFile()` が scope を解析（デフォルト: 'file'）
+  - `PromptMetadata` に scope フィールド追加（オプショナル）
+- ✅ `src/command/DiffReviewCommandHandler.ts` - 二段パイプライン対応
+  - Phase 1: ファイル単位レビュー実行
+  - Phase 2: 変更集合レビュー実行
+
+**動作確認:**
+- ✅ 型チェック成功
+- ✅ コンパイル成功
+- ✅ 全テスト成功（133 passing）
+- ✅ 後方互換性維持（scope未指定は自動的に'file'）
+
+**実装された機能:**
+- 二段パイプライン方式のレビュー
+  - Phase 1: ファイル単位レビュー（scope: file）
+  - Phase 2: 変更集合レビュー（scope: changeset）
+- Front Matter の scope フィールドによるプロンプト振り分け
+- 既存プロンプトとの完全な後方互換性
+
+**未実装（Phase 3以降）:**
+- 包括的な手動テスト
+- エラーケースの検証
+- パフォーマンス最適化
+- プロンプト設計ガイドライン作成
