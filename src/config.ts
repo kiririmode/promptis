@@ -73,6 +73,14 @@ export class Config {
   }
 
   /**
+   * 差分レビュープロンプトディレクトリパスを取得
+   * @returns ディレクトリパス、または未定義
+   */
+  static getCodeReviewDiffPath(): string | undefined {
+    return Config.getPath("codeReview.diffPath");
+  }
+
+  /**
    * 除外するプロンプトファイルを指定するリストを取得します。
    * @returns 除外ファイルパターンの配列
    */
@@ -104,5 +112,18 @@ export class Config {
    */
   static getOutputMode(): "chat-only" | "file-only" {
     return vscode.workspace.getConfiguration().get<"chat-only" | "file-only">("promptis.output.mode", "chat-only");
+  }
+
+  /**
+   * 差分比較用のデフォルトベースブランチを取得
+   * @returns ブランチ名（デフォルト: "origin/main"）
+   */
+  static getGitDefaultBaseBranch(): string {
+    if (!Config.isWorkspaceAvailabile()) {
+      return "origin/main";
+    }
+    return vscode.workspace
+      .getConfiguration()
+      .get<string>("promptis.git.defaultBaseBranch", "origin/main");
   }
 }

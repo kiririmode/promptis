@@ -1002,3 +1002,37 @@ codeReview.diffPath/
 **Phase 3（改善）**: テスト、パフォーマンス最適化、ユーザーフィードバック対応
 
 段階的に実装することで、リスクを抑えながら確実に機能を追加していきます。
+
+---
+
+## 実装進捗
+
+### Phase 1: 基盤実装 ✅ 完了（2026-01-10）
+
+**実装済みファイル:**
+- ✅ `src/gitUtil.ts` - Git API統合、差分取得・パース機能
+- ✅ `src/command/CommandRouter.ts` - コマンドルーティング基盤
+- ✅ `src/command/ReviewCommandHandler.ts` - ハンドラーインターフェース
+- ✅ `src/command/FileBasedReviewCommandHandler.ts` - 既存機能ラップ
+- ✅ `src/command/DiffReviewCommandHandler.ts` - 差分レビュー実装
+- ✅ `src/reviewService.ts` - レビュー処理の共通化
+- ✅ `src/config.ts` - 設定メソッド追加
+- ✅ `src/chatHandler.ts` - CommandRouterベースへリファクタリング
+- ✅ `package.json` - コマンドと設定プロパティ追加
+
+**動作確認:**
+- ✅ 型チェック成功
+- ✅ コンパイル成功
+- ✅ 全テスト成功（133 passing）
+- ✅ 既存機能の後方互換性維持
+
+**実装された機能:**
+- Git差分取得（`origin/main...HEAD` デフォルト、`#range:` カスタマイズ可能）
+- ファイル単位の差分レビュー
+- プロンプトフィルタリング（既存の `applyTo` パターン活用）
+- `/codereviewDiff` コマンド
+
+**未実装（Phase 2以降）:**
+- `scope` フィールドによる二段パイプライン（file/changeset）
+- FileReviewPhase、ChangesetReviewPhase
+- 変更集合全体の整合性チェック

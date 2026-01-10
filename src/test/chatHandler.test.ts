@@ -3,6 +3,7 @@ import path from "path";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 import * as chatHandlerModule from "../chatHandler";
+import * as reviewServiceModule from "../reviewService";
 import type { PromptMetadata } from "../util";
 
 /**
@@ -114,7 +115,8 @@ suite("chatHandler Test Suite", function () {
       const { context, stream, token } = createPartOfChatRequest();
 
       const result = await chatHandlerModule.chatHandler(request, context, stream, token);
-      assert.deepStrictEqual(result, { errorDetails: { message: "No prompt path found for command: unknownCommand" } });
+      // CommandRouterベースになったため、未知のコマンドは "Unknown command" エラーになる
+      assert.deepStrictEqual(result, { errorDetails: { message: "Unknown command: unknownCommand" } });
     });
 
     test("chatHandler should return error if no prompt files are found", async function () {
@@ -181,7 +183,7 @@ suite("processSelectedContent Test Suite", function () {
     } as unknown as vscode.LanguageModelChat;
     const { token, stream } = createPartOfChatRequest();
 
-    const result = await chatHandlerModule.processSelectedContent(promptMetadata, model, token, stream);
+    const result = await reviewServiceModule.processSelectedContent(promptMetadata, model, token, stream);
     assert.deepStrictEqual(result, { errorDetails: { message: "No active editor" } });
 
     mockActiveTextEditor.restore();
@@ -205,7 +207,7 @@ suite("processSelectedContent Test Suite", function () {
     } as unknown as vscode.LanguageModelChat;
     const { token, stream } = createPartOfChatRequest();
 
-    const result = await chatHandlerModule.processSelectedContent(promptMetadata, model, token, stream);
+    const result = await reviewServiceModule.processSelectedContent(promptMetadata, model, token, stream);
     assert.deepStrictEqual(result, { errorDetails: { message: "No selection found" } });
 
     mockActiveTextEditor.restore();
@@ -229,7 +231,7 @@ suite("processSelectedContent Test Suite", function () {
     } as unknown as vscode.LanguageModelChat;
     const { token, stream } = createPartOfChatRequest();
 
-    const result = await chatHandlerModule.processSelectedContent(promptMetadata, model, token, stream);
+    const result = await reviewServiceModule.processSelectedContent(promptMetadata, model, token, stream);
     assert.deepStrictEqual(result, { errorDetails: { message: "No content found" } });
 
     mockActiveTextEditor.restore();
@@ -253,7 +255,7 @@ suite("processSelectedContent Test Suite", function () {
     } as unknown as vscode.LanguageModelChat;
     const { token, stream } = createPartOfChatRequest();
 
-    await chatHandlerModule.processSelectedContent(promptMetadata, model, token, stream);
+    await reviewServiceModule.processSelectedContent(promptMetadata, model, token, stream);
   });
 });
 
@@ -622,7 +624,7 @@ suite("processContent Test Suite", function () {
     } as unknown as vscode.LanguageModelChat;
     const { token, stream } = createPartOfChatRequest();
 
-    await chatHandlerModule.processContent(content, contentFilePath, promptMetadata, model, token, stream);
+    await reviewServiceModule.processContent(content, contentFilePath, promptMetadata, model, token, stream);
 
     sinon.assert.calledWithMatch(stream.markdown as sinon.SinonSpy, /Blocked/);
   });
@@ -639,7 +641,7 @@ suite("processContent Test Suite", function () {
     } as unknown as vscode.LanguageModelChat;
     const { token, stream } = createPartOfChatRequest();
 
-    await chatHandlerModule.processContent(content, contentFilePath, promptMetadata, model, token, stream);
+    await reviewServiceModule.processContent(content, contentFilePath, promptMetadata, model, token, stream);
 
     sinon.assert.calledWithMatch(stream.markdown as sinon.SinonSpy, /No permissions/);
   });
@@ -656,7 +658,7 @@ suite("processContent Test Suite", function () {
     } as unknown as vscode.LanguageModelChat;
     const { token, stream } = createPartOfChatRequest();
 
-    await chatHandlerModule.processContent(content, contentFilePath, promptMetadata, model, token, stream);
+    await reviewServiceModule.processContent(content, contentFilePath, promptMetadata, model, token, stream);
 
     sinon.assert.calledWithMatch(stream.markdown as sinon.SinonSpy, /Not found/);
   });
@@ -673,7 +675,7 @@ suite("processContent Test Suite", function () {
     } as unknown as vscode.LanguageModelChat;
     const { token, stream } = createPartOfChatRequest();
 
-    await chatHandlerModule.processContent(content, contentFilePath, promptMetadata, model, token, stream);
+    await reviewServiceModule.processContent(content, contentFilePath, promptMetadata, model, token, stream);
 
     sinon.assert.calledWithMatch(stream.markdown as sinon.SinonSpy, /Generic error/);
   });
@@ -690,7 +692,7 @@ suite("processContent Test Suite", function () {
     } as unknown as vscode.LanguageModelChat;
     const { token, stream } = createPartOfChatRequest();
 
-    await chatHandlerModule.processContent(content, contentFilePath, promptMetadata, model, token, stream);
+    await reviewServiceModule.processContent(content, contentFilePath, promptMetadata, model, token, stream);
 
     sinon.assert.calledWithMatch(stream.markdown as sinon.SinonSpy, "response");
   });
