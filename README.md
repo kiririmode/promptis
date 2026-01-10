@@ -62,10 +62,43 @@ Chatウィンドウから @promptis に対して指示（コマンド）を出�
 | `codereviewCodeStandards`       | コード基準に関する一連のコードレビューを行う |
 | `codereviewFunctional`          | 機能観点のコードレビューを行う |
 | `codereviewNonFunctional`       | 非機能観点のコードレビューを行う |
+| `codereviewDiff`                | Git差分（変更箇所）のみをレビューする |
 | `reverseEngineering`  | ソースコードに対するリバースエンジニアリングを行う |
 | `drawDiagrams`                  | ソースコードから図式を作成する |
 
 プロンプト例については、[生成AI エンジニアリング活用ガイド](https://fintan-contents.github.io/gai-dev-guide/prompts)にも公開しており、圧縮ファイルは[こちら](https://github.com/Fintan-contents/gai-dev-guide/releases)からダウンロードいただけます。
+
+#### `/codereviewDiff`コマンドの特徴
+
+`/codereviewDiff`コマンドは、ファイル全体ではなくGit差分（変更箇所）のみをレビューする機能です。以下の特徴があります：
+
+- **変更箇所に特化**: ファイル全体ではなく、変更されたハンク（差分）のみをレビュー対象とするため、効率的
+- **二段階レビュー**:
+  - **Phase 1 (ファイル単位)**: 各差分ファイルを個別にレビュー（言語固有の観点）
+  - **Phase 2 (変更集合)**: 変更全体の整合性をチェック（クロスファイル整合性）
+- **柔軟な範囲指定**: デフォルトは`origin/main...HEAD`ですが、`#range:`構文でカスタマイズ可能
+
+**使用例:**
+
+```text
+# デフォルト: origin/main との差分をレビュー
+@promptis /codereviewDiff
+
+# 特定のブランチとの差分をレビュー
+@promptis /codereviewDiff #range:origin/develop...HEAD
+
+# 直近5コミットをレビュー
+@promptis /codereviewDiff #range:HEAD~5..HEAD
+```
+
+**プロンプト設計:**
+
+プロンプトファイルのFront Matterで`scope`フィールドを指定することで、レビューの対象を制御できます：
+
+- `scope: file` (デフォルト): ファイル単位のレビュー。`applyTo`パターンで対象ファイルを指定
+- `scope: changeset`: 変更集合全体のレビュー。全ファイルの差分をまとめて評価
+
+サンプルプロンプトは[examples/diff-review-prompts/](./examples/diff-review-prompts/)を参照してください。
 
 ### チャット変数
 
@@ -83,7 +116,20 @@ Promptisではさらに、次のチャット変数を利用できます。
 
 ### プロンプトファイルのFront Matter
 
-プロンプトファイル（`.md`）にFront Matter形式で`applyTo`フィールドを指定することで、特定のファイル拡張子やパターンにのみプロンプトを適用することができます。パスはワークスペースルートからの相対パスで指定します。これにより、ファイルタイプごとに異なるレビュー観点を持つことが可能になります。
+プロンプトファイル（`.md`）にFront Matter形式でメタデータを指定することで、プロンプトの適用条件を制御できます。
+
+#### `applyTo`フィールド
+
+`applyTo`フィールドを指定することで、特定のファイル拡張子やパターンにのみプロンプトを適用することができます。パスはワークスペースルートからの相対パスで指定します。これにより、ファイルタイプごとに異なるレビュー観点を持つことが可能になります。
+
+#### `scope`フィールド（`/codereviewDiff`専用）
+
+`/codereviewDiff`コマンドでは、`scope`フィールドでレビューの対象範囲を制御できます：
+
+- `scope: file` (デフォルト): ファイル単位のレビュー。各差分ファイルに対して個別にレビューを実行
+- `scope: changeset`: 変更集合全体のレビュー。全ての差分ファイルをまとめて評価
+
+詳細は[examples/diff-review-prompts/README.md](./examples/diff-review-prompts/README.md)を参照してください。
 
 #### 基本形式
 
@@ -221,10 +267,12 @@ prompts/codestandards/
 | `codeReview.codeStandardPath`     | string   |  | コードレビュープロンプト格納ディレクトリの絶対パス（コード基準観点） |
 | `codeReview.functionalPath`       | string   |  | コードレビュープロンプト格納ディレクトリの絶対パス（機能観点） |
 | `codeReview.nonFunctionalPath`    | string   |  | コードレビュープロンプト格納ディレクトリの絶対パス（非機能観点） |
+| `codeReview.diffPath`             | string   |  | Git差分レビュープロンプト格納ディレクトリの絶対パス |
 | `reverseEngineering.promptsPath`  | string   |  | リバースエンジニアリング用プロンプト格納ディレクトリの絶対パス |
 | `drawDiagrams.promptsPath`        | string   |  | 図式生成用のプロンプト用ディレクトリの絶対パス |
 | `prompt.excludeFilePatterns`      | array of string | | プロンプト格納ディレクトリ配下のプロンプトファイルのうち、実行しないファイル名のパターン（ex., `**/dir/*.md`）。記述できるパターンは[minimatch-cheat-sheet](https://github.com/motemen/minimatch-cheat-sheet)を参照。 |
 | `promptis.output.mode`            | string   | `chat-only` | 出力モード。`chat-only`はChatWindowに結果を表示、`file-only`はファイルのみに出力しChatWindowの負荷を軽減 |
+| `promptis.git.defaultBaseBranch`  | string   | `origin/main` | 差分比較のデフォルトベースブランチ（`/codereviewDiff`で使用） |
 | `chat.outputPath`                 | string   |  | チャット内容のバックアップ出力先ディレクトリの絶対パス（`file-only`モード時は必須） |
 | `telemetry.enable`                | boolean  | true | 利用状況を示すテレメトリ情報の送信可否 |
 
