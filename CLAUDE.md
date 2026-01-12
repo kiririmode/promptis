@@ -84,5 +84,16 @@ Promptisは、プロンプト実行を半自動化することでGitHub Copilot 
 ## テスト
 テストは`src/test/`にあり、5秒のタイムアウトでMochaフレームワークを使用します。拡張機能は`test-versions`スクリプトを介して複数のVS Codeバージョンでのテストをサポートします。
 
+### テスト出力形式
+- デフォルト（`npm test`）は`min`レポーター形式で、失敗したテストの詳細のみ表示します（コンテキスト節約のため）
+- 詳細な出力が必要な場合は、`--reporter spec`オプションを使用してください
+  - Linux: `xvfb-run -a vscode-test --reporter spec --coverage --coverage-output --coverage-reporter html json-summary`
+  - Windows/macOS: `vscode-test --reporter spec --coverage --coverage-output --coverage-reporter html json-summary`
+
 ## 品質基準
 - **循環的複雑度**: `npm run ccn`を実行して計測したCCN（Cyclic Complexity Number）が10以下であること
+- **類似度**: `npm run similarity`を実行して計測した類似度が85%以上のメソッドがないこと
+- **テストカバレッジ**: 各ファイルのカバレッジが85%以上であること
+  - 確認方法: `npm test`を実行後、以下のいずれかでカバレッジを確認
+    - JSON Summary: `coverage/coverage-summary.json`を確認（機械可読形式）
+
