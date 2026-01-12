@@ -67,29 +67,24 @@ suite("Front Matter E2E統合テスト", function () {
   const promptsDir = path.join(fixturesDir, "prompts");
   const sourcesDir = path.join(fixturesDir, "sources");
 
+  // 設定値のマッピング
+  const configMap: Record<string, unknown> = {
+    "prompt.excludeFilePatterns": [],
+    "chat.outputMode": "chat-only",
+    "promptis.output.mode": "chat-only",
+    "chat.outputPath": path.join(__dirname, "../../out/"),
+    "telemetry.enable": false,
+    "telemetry.enableTelemetry": false,
+    "codeReview.codeStandardPath": promptsDir,
+    "codeReview.functionalPath": promptsDir,
+    "codeReview.nonFunctionalPath": promptsDir,
+    "reverseEngineering.promptsPath": promptsDir,
+    "drawDiagrams.promptsPath": promptsDir,
+  };
+
   const mockConfigReturns = {
     get: sinon.stub().callsFake((section: string) => {
-      switch (section) {
-        case "prompt.excludeFilePatterns":
-          return [];
-        case "chat.outputMode":
-        case "promptis.output.mode":
-          return "chat-only"; // デフォルトはchat-only
-        case "chat.outputPath":
-          return path.join(__dirname, "../../out/");
-        case "telemetry.enable":
-        case "telemetry.enableTelemetry":
-          return false;
-        case "codeReview.codeStandardPath":
-        case "codeReview.functionalPath":
-        case "codeReview.nonFunctionalPath":
-        case "reverseEngineering.promptsPath":
-        case "drawDiagrams.promptsPath":
-          // プロンプト格納ディレクトリをテストフィクスチャに設定
-          return promptsDir;
-        default:
-          return undefined;
-      }
+      return configMap[section] ?? undefined;
     }),
     has: sinon.stub().returns(true),
     inspect: sinon.stub().returns(undefined),

@@ -213,6 +213,88 @@ export async function getDiffContent(repo: Repository, range: GitRange): Promise
 }
 
 /**
+ * ファイルの変更タイプを判定
+ * @param lines - diff の行配列
+ * @param aPath - a/ パス
+ * @returns 変更タイプ、oldPath、currentPath
+ */
+function determineChangeType(
+  lines: string[],
+  aPath: string,
+  bPath: string
+): { changeType: DiffResult['changeType']; oldPath: string | undefined; currentPath: string } {
+  let changeType: DiffResult['changeType'] = 'modified';
+  let oldPath: string | undefined;
+  let currentPath = bPath;
+
+  for (const line of lines) {
+    if (line.startsWith('new file mode')) {
+      changeType = 'added';
+      break;
+    } else if (line.startsWith('deleted file mode')) {
+      changeType = 'deleted';
+      currentPath = aPath;
+      break;
+    } else if (line.startsWith('rename from')) {
+      changeType = 'renamed';
+      oldPath = aPath;
+      break;
+    }
+  }
+
+  return { changeType, oldPath, currentPath };
+}
+
+/**
+ * 単一ファイルの diff をパース
+ * @param fileDiff - 単一ファイルの diff 文字列
+ * @param repoRoot - リポジトリルート
+ * @returns DiffResult または null（スキップする場合）
+ */
+function parseSingleFileDiff(fileDiff: string, repoRoot: string): DiffResult | null {
+  const lines = fileDiff.split('\n');
+
+  // 最初の行から a/path b/path を抽出
+  const firstLine = lines[0];
+  const pathMatch = firstLine.match(/a\/(.+?)\s+b\/(.+?)$/);
+  if (!pathMatch) {
+    return null;
+  }
+
+  const aPath = pathMatch[1];
+  const bPath = pathMatch[2];
+
+  // バイナリファイルをスキップ
+  if (fileDiff.includes('Binary files')) {
+    const { currentPath } = determineChangeType(lines, aPath, bPath);
+    console.log(`Skipping binary file: ${currentPath}`);
+    return null;
+  }
+
+  // 変更タイプを判定
+  const { changeType, oldPath, currentPath } = determineChangeType(lines, aPath, bPath);
+
+  // 絶対パスと相対パスを構築
+  const absolutePath = path.join(repoRoot, currentPath);
+  const relativePath = currentPath;
+
+  // ファイル拡張子を取得
+  const fileExtension = path.extname(currentPath);
+
+  // unified diff コンテンツを再構築（"diff --git" 行を含める）
+  const diffContent = `diff --git ${firstLine}\n${lines.slice(1).join('\n')}`;
+
+  return {
+    filePath: absolutePath,
+    relativePath,
+    diff: diffContent,
+    changeType,
+    oldPath: oldPath ? path.join(repoRoot, oldPath) : undefined,
+    fileExtension
+  };
+}
+
+/**
  * unified diff 出力をパースして DiffResult 配列に変換
  * @param diffOutput - Git diff の unified 形式出力
  * @param repoRoot - リポジトリルートの絶対パス
@@ -226,60 +308,10 @@ export function parseDiffOutput(diffOutput: string, repoRoot: string): DiffResul
   const fileDiffs = diffOutput.split(/^diff --git /m).slice(1);
 
   for (const fileDiff of fileDiffs) {
-    const lines = fileDiff.split('\n');
-
-    // 最初の行から a/path b/path を抽出
-    const firstLine = lines[0];
-    const pathMatch = firstLine.match(/a\/(.+?)\s+b\/(.+?)$/);
-    if (!pathMatch) {
-      continue;
+    const result = parseSingleFileDiff(fileDiff, repoRoot);
+    if (result) {
+      results.push(result);
     }
-
-    const aPath = pathMatch[1];
-    const bPath = pathMatch[2];
-
-    // 変更タイプを判定
-    let changeType: DiffResult['changeType'] = 'modified';
-    let oldPath: string | undefined;
-    let currentPath = bPath;
-
-    // new file, deleted file, rename などを検出
-    for (const line of lines) {
-      if (line.startsWith('new file mode')) {
-        changeType = 'added';
-      } else if (line.startsWith('deleted file mode')) {
-        changeType = 'deleted';
-        currentPath = aPath;
-      } else if (line.startsWith('rename from')) {
-        changeType = 'renamed';
-        oldPath = aPath;
-      }
-    }
-
-    // バイナリファイルをスキップ
-    if (fileDiff.includes('Binary files')) {
-      console.log(`Skipping binary file: ${currentPath}`);
-      continue;
-    }
-
-    // 絶対パスと相対パスを構築
-    const absolutePath = path.join(repoRoot, currentPath);
-    const relativePath = currentPath;
-
-    // ファイル拡張子を取得
-    const fileExtension = path.extname(currentPath);
-
-    // unified diff コンテンツを再構築（"diff --git" 行を含める）
-    const diffContent = `diff --git ${firstLine}\n${lines.slice(1).join('\n')}`;
-
-    results.push({
-      filePath: absolutePath,
-      relativePath,
-      diff: diffContent,
-      changeType,
-      oldPath: oldPath ? path.join(repoRoot, oldPath) : undefined,
-      fileExtension
-    });
   }
 
   return results;
