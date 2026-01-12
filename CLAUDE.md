@@ -17,7 +17,6 @@ Promptisは、プロンプト実行を半自動化することでGitHub Copilot 
 - `npm test` - カバレッジ付きの完全なテストスイートを実行
 - `npm run check-types` - ファイル出力なしでTypeScript型チェックを実行
 - `npm run lint` - ソースコードのESLintとOpenAPI仕様の検証を実行
-- `npm run pretest` - テストコンパイル、ソースコンパイル、lintingを実行する準備スクリプト
 
 ### 配布用ビルド
 - `npm run build` - ライセンスレポートの作成とVSIXパッケージの作成
@@ -84,3 +83,6 @@ Promptisは、プロンプト実行を半自動化することでGitHub Copilot 
 
 ## テスト
 テストは`src/test/`にあり、5秒のタイムアウトでMochaフレームワークを使用します。拡張機能は`test-versions`スクリプトを介して複数のVS Codeバージョンでのテストをサポートします。
+
+## 品質基準
+- **循環的複雑度**: `npm run ccn`を実行して計測したCCN（Cyclic Complexity Number）が10以下であること
